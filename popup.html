@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>alba</title>
+    <link rel="stylesheet" href="styles.css" />
+    <style>
+      body {
+        font-family: var(--alba-font);
+        margin: 0;
+        padding: 16px;
+        width: 320px;
+        background: var(--alba-cream);
+        color: var(--alba-charcoal);
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 18px;
+      }
+      .alba-popup-section {
+        margin-bottom: 14px;
+      }
+      .alba-popup-card {
+        background: rgba(255, 255, 255, 0.8);
+        border-radius: 14px;
+        border: 1px solid var(--alba-border);
+        padding: 12px;
+        margin-bottom: 12px;
+      }
+      .alba-settings-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 8px;
+        font-size: 13px;
+      }
+      .alba-settings-row:last-child {
+        margin-bottom: 0;
+      }
+      .alba-settings-row select,
+      .alba-settings-row input[type="checkbox"] {
+        margin-left: 12px;
+      }
+      .alba-popup-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .alba-popup-actions button {
+        flex: 1;
+        padding: 8px;
+        border-radius: 999px;
+        border: 1px solid var(--alba-border);
+        background: #fff;
+        cursor: pointer;
+      }
+      .alba-hint {
+        font-size: 11px;
+        color: #5a6a63;
+      }
+    </style>
+  </head>
+  <body class="alba-theme">
+    <h1>alba - daily footprint</h1>
+    <section class="alba-popup-section">
+      <div class="alba-popup-card">
+        <div id="alba-today-totals">--</div>
+        <div id="alba-comparison" class="alba-hint"></div>
+      </div>
+    </section>
+    <section class="alba-popup-section">
+      <div class="alba-popup-card">
+        <div class="alba-settings-row">
+          <label for="alba-enabled">Extension enabled</label>
+          <input type="checkbox" id="alba-enabled" />
+        </div>
+        <div class="alba-settings-row">
+          <label for="alba-optimizer">Optimizer enabled</label>
+          <input type="checkbox" id="alba-optimizer" />
+        </div>
+        <div class="alba-settings-row">
+          <label for="alba-profile">Model profile</label>
+          <select id="alba-profile"></select>
+        </div>
+        <div class="alba-settings-row">
+          <label for="alba-region">Region</label>
+          <select id="alba-region"></select>
+        </div>
+      </div>
+    </section>
+    <section class="alba-popup-section">
+      <div class="alba-popup-actions">
+        <button id="alba-export">Export CSV</button>
+        <button id="alba-reset">Reset today</button>
+      </div>
+    </section>
+    <script src="energyConfig.js"></script>
+    <script src="popup.js"></script>
+  </body>
+</html>
