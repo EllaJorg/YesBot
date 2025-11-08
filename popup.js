@@ -70,7 +70,12 @@
 
   function renderTotals(totalsMap) {
     const totals = totalsMap[todayKey] || { Wh: 0, gCO2: 0, waterMl: 0 };
-    settingsEls.totals.textContent = `${totals.Wh.toFixed(2)} Wh | ${totals.gCO2.toFixed(2)} g CO2 | ${totals.waterMl.toFixed(0)} mL`;
+    const tooltipCopy = formatTotalsTooltip(totals);
+    settingsEls.totals.innerHTML = `
+      <span class="alba-tooltip-host">
+        ${totals.Wh.toFixed(2)} Wh | ${totals.gCO2.toFixed(2)} g CO2 | ${totals.waterMl.toFixed(0)} mL
+        <span class="alba-tooltip">${tooltipCopy}</span>
+      </span>`;
     settingsEls.comparison.textContent = formatComparison(totals.Wh);
   }
 
@@ -80,6 +85,23 @@
     if (!baseline || !baseline.factorWh) return 'Comparable impact unavailable.';
     const value = Wh / baseline.factorWh;
     return `${value.toFixed(1)} ${baseline.label}`;
+  }
+
+  function formatTotalsTooltip(totals) {
+    const pieces = [];
+    const kWh = totals.Wh / 1000;
+    pieces.push(`Energy: ${totals.Wh.toFixed(3)} Wh (~${kWh.toFixed(6)} kWh).`);
+    const baseline = ALBA_CONFIG.baselineComparisons && ALBA_CONFIG.baselineComparisons[0];
+    if (baseline && baseline.factorWh) {
+      const eq = totals.Wh / baseline.factorWh;
+      if (eq >= 0.01) {
+        pieces.push(`≈ ${eq.toFixed(1)} ${baseline.label}.`);
+      }
+    }
+    pieces.push(`Emissions: ${totals.gCO2.toFixed(3)} g CO2.`);
+    pieces.push(`Water: ${totals.waterMl.toFixed(1)} mL.`);
+    pieces.push('Estimates run locally using alba assumptions.');
+    return pieces.join(' ');
   }
 
   function exportHistoryFromPopup() {

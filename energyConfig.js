@@ -14,6 +14,15 @@
       audio: ['audio', 'transcribe', 'podcast'],
       pdf: ['pdf', 'document', 'report']
     },
+    heuristics: {
+      defaultImageCount: 1,
+      maxImageCount: 8,
+      defaultPdfPages: 4,
+      maxPdfPages: 60,
+      pdfTokensPerPage: 350,
+      defaultAudioMinutes: 1,
+      maxAudioMinutes: 20
+    },
     modelProfiles: {
       small: {
         label: 'Small',

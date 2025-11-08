@@ -26,7 +26,15 @@
   cursor: default;
 }
 
-.alba-impact-label .alba-tooltip {
+.alba-widget-totals:hover {
+  text-decoration: underline;
+}
+
+.alba-tooltip-host {
+  position: relative;
+}
+
+.alba-tooltip {
   opacity: 0;
   visibility: hidden;
   position: absolute;
@@ -45,7 +53,8 @@
   z-index: 2147483647;
 }
 
-.alba-impact-label:hover .alba-tooltip {
+.alba-tooltip-host:hover .alba-tooltip,
+.alba-tooltip-host:focus-within .alba-tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
@@ -252,6 +261,12 @@
   font-size: 13px;
   line-height: 1.4;
   margin-bottom: 8px;
+}
+
+.alba-widget-totals-line {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 0;
 }
 
 .alba-widget-comparison {
