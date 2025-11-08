@@ -1,0 +1,34 @@
+{
+  "manifest_version": 3,
+  "name": "alba",
+  "description": "Privacy-first AI impact estimator with prompt optimizer and daily footprint tracker.",
+  "version": "0.1.0",
+  "permissions": ["storage"],
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "action": {
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png"
+    }
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://chat.openai.com/*",
+        "https://chatgpt.com/*",
+        "https://claude.ai/*",
+        "https://gemini.google.com/*",
+        "https://perplexity.ai/*",
+        "https://www.perplexity.ai/*"
+      ],
+      "css": ["styles.css"],
+      "js": ["energyConfig.js", "content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}
