@@ -301,6 +301,107 @@
   font-weight: 500;
 }
 
+/* Inline suggestion styles (Grammarly-like) */
+.alba-inline-suggestion {
+  font-family: var(--alba-font);
+  background: linear-gradient(135deg, rgba(106, 164, 132, 0.08) 0%, rgba(106, 164, 132, 0.12) 100%);
+  border: 1px solid var(--alba-sage);
+  border-radius: 14px;
+  padding: 12px;
+  margin-top: 8px;
+  margin-bottom: 8px;
+  box-shadow: 0 2px 8px rgba(106, 164, 132, 0.15);
+  animation: alba-slide-in 0.3s ease-out;
+}
+
+@keyframes alba-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.alba-suggestion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+  gap: 8px;
+}
+
+.alba-suggestion-badge {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--alba-sage-dark);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.alba-suggestion-savings {
+  font-size: 11px;
+  color: var(--alba-sage-dark);
+  background: rgba(255, 255, 255, 0.6);
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-weight: 500;
+}
+
+.alba-suggestion-content {
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 10px;
+  padding: 10px;
+  font-size: 13px;
+  color: var(--alba-charcoal);
+  line-height: 1.5;
+  margin-bottom: 10px;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  border: 1px solid rgba(106, 164, 132, 0.2);
+}
+
+.alba-suggestion-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.alba-suggestion-btn {
+  border: 1px solid var(--alba-border);
+  border-radius: 999px;
+  padding: 6px 16px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 150ms ease;
+  font-family: var(--alba-font);
+}
+
+.alba-suggestion-dismiss {
+  background: #fff;
+  color: var(--alba-charcoal);
+}
+
+.alba-suggestion-dismiss:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.alba-suggestion-accept {
+  background: var(--alba-sage);
+  color: #fff;
+  border-color: var(--alba-sage);
+}
+
+.alba-suggestion-accept:hover {
+  background: var(--alba-sage-dark);
+  border-color: var(--alba-sage-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(106, 164, 132, 0.3);
+}
+
 @media (max-width: 768px) {
   .alba-impact-label {
     width: 100%;

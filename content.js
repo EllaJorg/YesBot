@@ -140,6 +140,8 @@
     state.analyzerObserver = null;
     state.assistantObserver = null;
     state.promptControllers.forEach((controller) => {
+      if (controller.optimizationTimer) clearTimeout(controller.optimizationTimer);
+      hideInlineSuggestion(controller);
       controller.input.removeEventListener('input', controller.listener);
       controller.input.removeEventListener('keyup', controller.listener);
       controller.input.removeEventListener('blur', controller.listener);
@@ -152,7 +154,7 @@
       state.widget.root.remove();
     }
     state.widget = null;
-    document.querySelectorAll('.alba-impact-label, .alba-optimizer-panel').forEach((node) => node.remove());
+    document.querySelectorAll('.alba-impact-label, .alba-optimizer-panel, .alba-inline-suggestion').forEach((node) => node.remove());
   }
 
   function loadPersistedState() {
@@ -236,7 +238,10 @@
       container: document.createElement('div'),
       optimizeButton: document.createElement('button'),
       previewText: document.createElement('span'),
-      lastEstimate: null
+      inlineSuggestion: null,
+      lastEstimate: null,
+      lastOptimizedText: null,
+      optimizationTimer: null
     };
 
     controller.container.className = 'alba-optimizer-bar';
@@ -259,7 +264,10 @@
     const parent = editableTarget.closest('form') || editableTarget.parentElement;
     (parent || editableTarget).appendChild(controller.container);
 
-    const listener = () => schedulePreviewUpdate(controller);
+    const listener = () => {
+      schedulePreviewUpdate(controller);
+      scheduleInlineOptimization(controller);
+    };
     controller.listener = listener;
     editableTarget.addEventListener('input', listener);
     editableTarget.addEventListener('keyup', listener);
@@ -291,6 +299,137 @@
       updatePromptEstimate(controller);
     }, ALBA_CONFIG.debounceMs);
     state.debounceTimers.set(input, timer);
+  }
+
+  function scheduleInlineOptimization(controller) {
+    if (!state.settings.optimizerEnabled) return;
+    if (controller.optimizationTimer) clearTimeout(controller.optimizationTimer);
+
+    controller.optimizationTimer = setTimeout(() => {
+      fetchAndShowInlineSuggestion(controller);
+    }, 2000); // Wait 2 seconds after user stops typing
+  }
+
+  async function fetchAndShowInlineSuggestion(controller) {
+    const text = getInputText(controller.input) || '';
+    console.log('[Alba] Checking for optimization. Text length:', text.length, 'Min chars:', ALBA_CONFIG.minChars);
+
+    if (!text.trim() || text.length < ALBA_CONFIG.minChars) {
+      hideInlineSuggestion(controller);
+      return;
+    }
+
+    // Don't refetch if text hasn't changed
+    if (controller.lastOptimizedText === text) {
+      console.log('[Alba] Text unchanged, skipping optimization');
+      return;
+    }
+
+    controller.lastOptimizedText = text;
+    console.log('[Alba] Optimizing text:', text.substring(0, 50) + '...');
+
+    // Try local optimization first
+    const localOptimized = applyLocalOptimizer(text);
+    console.log('[Alba] Local optimization result:', localOptimized.substring(0, 50) + '...');
+
+    // If local optimization made changes, show it immediately
+    if (localOptimized !== text && localOptimized.length < text.length) {
+      console.log('[Alba] Showing local optimization suggestion');
+      showInlineSuggestion(controller, localOptimized, 'local');
+    }
+
+    // If remote optimizer is enabled, fetch remote suggestion
+    if (state.settings.remoteOptimizer) {
+      console.log('[Alba] Fetching remote optimization...');
+      const remoteOptimized = await fetchRemoteOptimization(text);
+      console.log('[Alba] Remote optimization result:', remoteOptimized);
+      if (remoteOptimized && remoteOptimized.trim() && remoteOptimized !== text) {
+        console.log('[Alba] Showing remote optimization suggestion');
+        showInlineSuggestion(controller, remoteOptimized.trim(), 'remote');
+      }
+    } else {
+      console.log('[Alba] Remote optimizer disabled in settings');
+    }
+  }
+
+  function showInlineSuggestion(controller, optimizedText, source) {
+    const originalText = getInputText(controller.input);
+
+    // Calculate impact savings
+    const originalImpact = estimateImpact({
+      text: originalText,
+      modality: detectModality(originalText),
+      images: 0
+    });
+    const optimizedImpact = estimateImpact({
+      text: optimizedText,
+      modality: detectModality(optimizedText),
+      images: 0
+    });
+
+    const savings = originalImpact && optimizedImpact
+      ? ((originalImpact.Wh - optimizedImpact.Wh) / originalImpact.Wh * 100).toFixed(0)
+      : 0;
+
+    // Remove existing suggestion if any
+    hideInlineSuggestion(controller);
+
+    // Create inline suggestion card
+    const suggestion = document.createElement('div');
+    suggestion.className = 'alba-inline-suggestion';
+    applyTheme(suggestion);
+
+    const header = document.createElement('div');
+    header.className = 'alba-suggestion-header';
+    header.innerHTML = `
+      <span class="alba-suggestion-badge">${source === 'remote' ? 'AI Optimized' : 'Quick Optimization'}</span>
+      <span class="alba-suggestion-savings">${savings > 0 ? `Save ${savings}% energy` : 'Optimized'}</span>
+    `;
+
+    const content = document.createElement('div');
+    content.className = 'alba-suggestion-content';
+    content.textContent = optimizedText;
+
+    const actions = document.createElement('div');
+    actions.className = 'alba-suggestion-actions';
+
+    const dismissBtn = document.createElement('button');
+    dismissBtn.className = 'alba-suggestion-btn alba-suggestion-dismiss';
+    dismissBtn.textContent = 'Dismiss';
+    dismissBtn.type = 'button';
+    dismissBtn.addEventListener('click', () => hideInlineSuggestion(controller));
+
+    const acceptBtn = document.createElement('button');
+    acceptBtn.className = 'alba-suggestion-btn alba-suggestion-accept';
+    acceptBtn.textContent = 'Accept';
+    acceptBtn.type = 'button';
+    acceptBtn.addEventListener('click', () => {
+      setInputText(controller.input, optimizedText);
+      controller.input.dispatchEvent(new Event('input', { bubbles: true }));
+      hideInlineSuggestion(controller);
+      updatePromptEstimate(controller);
+    });
+
+    actions.appendChild(dismissBtn);
+    actions.appendChild(acceptBtn);
+
+    suggestion.appendChild(header);
+    suggestion.appendChild(content);
+    suggestion.appendChild(actions);
+
+    // Insert suggestion near the input
+    const parent = controller.container.parentElement;
+    if (parent) {
+      parent.insertBefore(suggestion, controller.container);
+      controller.inlineSuggestion = suggestion;
+    }
+  }
+
+  function hideInlineSuggestion(controller) {
+    if (controller.inlineSuggestion) {
+      controller.inlineSuggestion.remove();
+      controller.inlineSuggestion = null;
+    }
   }
 
   function updatePromptEstimate(controller) {
@@ -993,16 +1132,30 @@
     }
   }
 
-  // Placeholder for optional remote optimizer (disabled by default).
+  // Remote optimizer implementation
   async function fetchRemoteOptimization(prompt) {
-    if (!state.settings.remoteOptimizer) {
+    // Do nothing if remote optimizer disabled in settings
+    if (!state.settings.remoteOptimizer) return null;
+
+    try {
+      // Adjust URL to your backend. For local dev use http://localhost:3000/optimize
+      const resp = await fetch("http://localhost:3000/optimize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt })
+      });
+
+      if (!resp.ok) {
+        console.warn("Remote optimizer error", resp.status, await resp.text());
+        return null;
+      }
+
+      const data = await resp.json();
+      // Expect { optimized: "..." } (server's response shape)
+      return (data && data.optimized) ? data.optimized.trim() : null;
+    } catch (err) {
+      console.error("fetchRemoteOptimization failed:", err);
       return null;
     }
-    // Intentionally left blank: configure your endpoint + API key, then return optimized text.
-    // Example skeleton:
-    // const response = await fetch(state.settings.remoteEndpoint, { method: 'POST', body: JSON.stringify({ prompt }) });
-    // const data = await response.json();
-    // return data.optimizedPrompt;
-    return null;
   }
 })();
