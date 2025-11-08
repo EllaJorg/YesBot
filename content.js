@@ -62,6 +62,39 @@
     }
   ];
 
+  const EMBEDDING_LABELS = ['text', 'image', 'audio'];
+  const WORD_EMBEDDINGS = {
+    summarize: [1, 0, 0],
+    summary: [1, 0, 0],
+    essay: [1, 0, 0],
+    paragraph: [1, 0, 0],
+    outline: [1, 0, 0],
+    report: [1, 0, 0],
+    brief: [1, 0, 0],
+    explain: [1, 0, 0],
+    draw: [0, 1, 0],
+    image: [0, 1, 0],
+    images: [0, 1, 0],
+    illustration: [0, 1, 0],
+    render: [0, 1, 0],
+    picture: [0, 1, 0],
+    dalle: [0, 1, 0],
+    diffusion: [0, 1, 0],
+    photo: [0, 1, 0],
+    sketch: [0, 1, 0],
+    concept: [0, 1, 0],
+    mosaic: [0, 1, 0],
+    storyboard: [0, 1, 0],
+    audio: [0, 0, 1],
+    speech: [0, 0, 1],
+    podcast: [0, 0, 1],
+    transcribe: [0, 0, 1],
+    transcription: [0, 0, 1],
+    voice: [0, 0, 1],
+    minutes: [0, 0, 1],
+    lyrics: [0, 0, 1]
+  };
+
   const state = {
     settings: { ...ALBA_CONFIG.defaultSettings },
     dailyTotals: {},
@@ -108,9 +141,10 @@
     state.assistantObserver = null;
     state.promptControllers.forEach((controller) => {
       controller.input.removeEventListener('input', controller.listener);
+      controller.input.removeEventListener('keyup', controller.listener);
       controller.input.removeEventListener('blur', controller.listener);
       controller.container.remove();
-      delete controller.input.dataset.albaAttached;
+      delete controller.host.dataset.albaAttached;
     });
     state.promptControllers.clear();
     state.debounceTimers = new WeakMap();
@@ -177,24 +211,28 @@
   function setupPromptAnalyzer() {
     attachAnalyzerToExistingPrompts();
     state.analyzerObserver = new MutationObserver(() => {
+      cleanupDetachedControllers();
       attachAnalyzerToExistingPrompts();
     });
     state.analyzerObserver.observe(document.body, { childList: true, subtree: true });
   }
 
   function attachAnalyzerToExistingPrompts() {
+    cleanupDetachedControllers();
     state.site.promptSelectors.forEach((selector) => {
       document.querySelectorAll(selector).forEach((input) => {
-        if (input.dataset.albaAttached) return;
-        input.dataset.albaAttached = 'true';
-        createPromptController(input);
+        const resolved = resolveEditableTarget(input);
+        if (!resolved || resolved.dataset.albaAttached) return;
+        resolved.dataset.albaAttached = 'true';
+        createPromptController(resolved);
       });
     });
   }
 
-  function createPromptController(inputEl) {
+  function createPromptController(editableTarget) {
     const controller = {
-      input: inputEl,
+      host: editableTarget,
+      input: editableTarget,
       container: document.createElement('div'),
       optimizeButton: document.createElement('button'),
       previewText: document.createElement('span'),
@@ -204,7 +242,7 @@
     controller.container.className = 'alba-optimizer-bar';
     applyTheme(controller.container);
     controller.previewText.className = 'alba-optimizer-preview';
-    controller.previewText.textContent = 'alba | Impact unknown';
+    //controller.previewText.textContent = 'alba | Impact unknown';
 
     controller.optimizeButton.className = 'alba-optimizer-action';
     controller.optimizeButton.type = 'button';
@@ -218,16 +256,30 @@
     controller.container.appendChild(controller.previewText);
     controller.container.appendChild(controller.optimizeButton);
 
-    const parent = inputEl.closest('form') || inputEl.parentElement;
-    (parent || inputEl).appendChild(controller.container);
+    const parent = editableTarget.closest('form') || editableTarget.parentElement;
+    (parent || editableTarget).appendChild(controller.container);
 
     const listener = () => schedulePreviewUpdate(controller);
     controller.listener = listener;
-    inputEl.addEventListener('input', listener);
-    inputEl.addEventListener('blur', listener);
+    editableTarget.addEventListener('input', listener);
+    editableTarget.addEventListener('keyup', listener);
+    editableTarget.addEventListener('blur', listener);
 
-    state.promptControllers.set(inputEl, controller);
+    state.promptControllers.set(editableTarget, controller);
     schedulePreviewUpdate(controller);
+  }
+
+  function cleanupDetachedControllers() {
+    state.promptControllers.forEach((controller, host) => {
+      if (!host.isConnected || !document.contains(host)) {
+        host.removeEventListener('input', controller.listener);
+        host.removeEventListener('keyup', controller.listener);
+        host.removeEventListener('blur', controller.listener);
+        controller.container.remove();
+        delete host.dataset.albaAttached;
+        state.promptControllers.delete(host);
+      }
+    });
   }
 
   function schedulePreviewUpdate(controller) {
@@ -242,19 +294,32 @@
   }
 
   function updatePromptEstimate(controller) {
-    const text = getInputText(controller.input);
-    const modality = detectModality(text);
-    const meetsThreshold = text && (text.length >= ALBA_CONFIG.minChars || modality !== 'text');
-    if (!meetsThreshold) {
+    const text = (getInputText(controller.input) || '').trim();
+    if (!text) {
       controller.previewText.textContent = 'alba | Impact unknown';
       controller.lastEstimate = null;
       return;
     }
-    const assumedImages = modality === 'image' ? estimateRequestedImages(text) : 0;
-    const assumedMinutes = modality === 'audio' ? estimateAudioMinutes(text) : 0;
-    const estimate = estimateImpact({ text, modality, images: assumedImages, minutes: assumedMinutes });
-    controller.lastEstimate = estimate;
-    controller.previewText.textContent = formatImpactLine(estimate);
+    const intent = detectIntentWithEmbeddings(text);
+    const keywordModality = detectModality(text);
+    const modality = intent.modality || keywordModality;
+    const units = estimatePromptUnits(modality, text);
+    const estimateConfig = { text, modality };
+    if (modality === 'image') {
+      estimateConfig.images = units.units;
+    } else if (modality === 'audio') {
+      estimateConfig.minutes = units.units;
+    } else {
+      estimateConfig.tokensOverride = units.tokens || units.units;
+    }
+    const estimate = estimateImpact(estimateConfig);
+    if (!estimate) {
+      controller.lastEstimate = null;
+      controller.previewText.textContent = 'alba | Impact unknown';
+    } else {
+      controller.lastEstimate = estimate;
+      controller.previewText.textContent = formatImpactLine(estimate);
+    }
     controller.optimizeButton.disabled = !state.settings.optimizerEnabled;
   }
 
@@ -650,7 +715,7 @@
     return 'text';
   }
 
-  function estimateImpact({ text = '', modality = 'text', images = 0, minutes = 0 }) {
+  function estimateImpact({ text = '', modality = 'text', images = 0, minutes = 0, tokensOverride }) {
     // All calculations are approximate and rely solely on ALBA_CONFIG coefficients.
     // Document methodology externally (e.g., README) so the UI stays minimal.
     const profile = ALBA_CONFIG.modelProfiles[state.settings.modelProfile] || ALBA_CONFIG.modelProfiles.balanced;
@@ -659,6 +724,9 @@
     const heuristics = ALBA_CONFIG.heuristics || {};
 
     let tokens = Math.max(1, Math.round((text.length || 0) / 4));
+    if (typeof tokensOverride === 'number' && tokensOverride > 0) {
+      tokens = tokensOverride;
+    }
     if (modality === 'pdf') {
       const pdfPages = estimatePdfPages(text, heuristics);
       tokens = Math.max(tokens, pdfPages * (heuristics.pdfTokensPerPage || 350));
@@ -833,6 +901,96 @@
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
+  }
+
+  function resolveEditableTarget(element) {
+    if (!element) return null;
+    if (isUsableEditable(element)) return element;
+    const scopes = [element, element.closest?.('[contenteditable="true"], [role="textbox"], textarea'), element.parentElement].filter(Boolean);
+    const selectorOrder = [
+      '[contenteditable="true"][role="textbox"]',
+      '[contenteditable="true"][data-placeholder]',
+      '[contenteditable="true"]',
+      '[role="textbox"]',
+      'textarea'
+    ];
+    for (const scope of scopes) {
+      for (const selector of selectorOrder) {
+        const candidate =
+          scope.matches?.(selector) ? scope : scope.querySelector?.(selector) || scope.parentElement?.querySelector?.(selector);
+        if (candidate && isUsableEditable(candidate)) {
+          return candidate;
+        }
+      }
+    }
+    return null;
+  }
+
+  function isUsableEditable(element) {
+    if (!element || !element.matches) return false;
+    if (!element.matches('textarea, [contenteditable="true"], [role="textbox"]')) return false;
+    if (element.getAttribute('aria-hidden') === 'true') return false;
+    if (element.closest('[aria-hidden="true"]')) return false;
+    const style = window.getComputedStyle(element);
+    if (!style || style.display === 'none' || style.visibility === 'hidden') return false;
+    const rect = element.getBoundingClientRect();
+    return rect.width > 0 && rect.height > 0;
+  }
+
+  function estimateTokensFromText(text) {
+    if (!text || !text.trim()) return 0;
+    const tokenLike = (text.match(/\b[\w\d'-]+\b/g) || []).length;
+    const charEstimate = text.replace(/\s+/g, '').length / 4;
+    const average = (tokenLike * 1.3 + charEstimate) / 2;
+    return Math.max(1, Math.round(average));
+  }
+
+  function detectIntentWithEmbeddings(text) {
+    const lower = (text || '').toLowerCase();
+    const words = lower.match(/\b[\w'-]+\b/g) || [];
+    const vector = [0, 0, 0];
+    words.forEach((word) => {
+      const embedding = WORD_EMBEDDINGS[word];
+      if (!embedding) return;
+      embedding.forEach((value, idx) => {
+        vector[idx] += value;
+      });
+    });
+    let modality = 'text';
+    let max = 0;
+    vector.forEach((value, idx) => {
+      if (value > max) {
+        max = value;
+        modality = EMBEDDING_LABELS[idx];
+      }
+    });
+    if (/\b(image|images|photo|render|picture|sketch|dalle|diffusion)\b/.test(lower)) {
+      modality = 'image';
+    }
+    if (/\b(transcribe|audio|recording|speech|podcast|voice)\b/.test(lower)) {
+      modality = 'audio';
+    }
+    return { modality };
+  }
+
+  function estimatePromptUnits(modality, text) {
+    const lower = (text || '').toLowerCase();
+    switch (modality) {
+      case 'image': {
+        const match = lower.match(/(\d+)\s?(?:image|images|picture|pictures|render|renders|variation|variations)/);
+        const count = match ? parseInt(match[1], 10) : estimateRequestedImages(text);
+        return { units: Math.max(1, count) };
+      }
+      case 'audio': {
+        const minuteMatch = lower.match(/(\d+(?:\.\d+)?)\s?(?:min|minute|minutes)/);
+        const minutes = minuteMatch ? parseFloat(minuteMatch[1]) : estimateAudioMinutes(text);
+        return { units: Math.max(1, minutes) };
+      }
+      default: {
+        const tokens = estimateTokensFromText(text);
+        return { units: tokens, tokens };
+      }
+    }
   }
 
   // Placeholder for optional remote optimizer (disabled by default).
