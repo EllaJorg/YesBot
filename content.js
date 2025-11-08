@@ -707,15 +707,30 @@
   }
 
   // Placeholder for optional remote optimizer (disabled by default).
-  async function fetchRemoteOptimization(prompt) {
-    if (!state.settings.remoteOptimizer) {
+  // content.js — replace the stubbed fetchRemoteOptimization with this
+async function fetchRemoteOptimization(prompt) {
+  // Do nothing if remote optimizer disabled in settings
+  if (!state.settings.remoteOptimizer) return null;
+
+  try {
+    // Adjust URL to your backend. For local dev use http://localhost:3000/optimize
+    const resp = await fetch("http://localhost:3000/optimize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ prompt })
+    });
+
+    if (!resp.ok) {
+      console.warn("Remote optimizer error", resp.status, await resp.text());
       return null;
     }
-    // Intentionally left blank: configure your endpoint + API key, then return optimized text.
-    // Example skeleton:
-    // const response = await fetch(state.settings.remoteEndpoint, { method: 'POST', body: JSON.stringify({ prompt }) });
-    // const data = await response.json();
-    // return data.optimizedPrompt;
+
+    const data = await resp.json();
+    // Expect { optimized: "..." } (server's response shape below)
+    return (data && data.optimized) ? data.optimized.trim() : null;
+  } catch (err) {
+    console.error("fetchRemoteOptimization failed:", err);
     return null;
   }
+}
 })();

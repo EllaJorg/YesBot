@@ -63,7 +63,7 @@
       optimizerEnabled: settingsEls.optimizer.checked,
       modelProfile: settingsEls.profile.value,
       region: settingsEls.region.value,
-      remoteOptimizer: false
+      remoteOptimizer: true
     };
     chrome.storage.sync.set({ [ALBA_STORAGE_KEYS.settings]: payload });
   }

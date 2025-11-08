@@ -57,7 +57,7 @@
       optimizerEnabled: true,
       modelProfile: 'balanced',
       region: 'global',
-      remoteOptimizer: false
+      remoteOptimizer: true
     }
   };
 
