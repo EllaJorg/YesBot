@@ -2,7 +2,7 @@
   // Centralized energy + emission coefficients for alba. Adjust values here to tune methodology.
   const ALBA_CONFIG = {
     version: '2024-06-01',
-    minChars: 20,
+    minChars: 15,  // Minimum characters before showing suggestions
     debounceMs: 300,
     responseDelayMs: 500,
     baselineComparisons: [
@@ -13,6 +13,15 @@
       image: ['generate an image', 'draw', 'photo of', 'illustration', 'picture of'],
       audio: ['audio', 'transcribe', 'podcast'],
       pdf: ['pdf', 'document', 'report']
+    },
+    heuristics: {
+      defaultImageCount: 1,
+      maxImageCount: 8,
+      defaultPdfPages: 4,
+      maxPdfPages: 60,
+      pdfTokensPerPage: 350,
+      defaultAudioMinutes: 1,
+      maxAudioMinutes: 20
     },
     modelProfiles: {
       small: {
@@ -57,7 +66,7 @@
       optimizerEnabled: true,
       modelProfile: 'balanced',
       region: 'global',
-      remoteOptimizer: true
+      remoteOptimizer: true  // Enable remote optimizer by default (requires server running)
     }
   };
 
