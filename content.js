@@ -964,37 +964,55 @@
     return `${totals.Wh.toFixed(2)} Wh • ${totals.gCO2.toFixed(2)} g CO₂ • ${totals.waterMl.toFixed(0)} mL`;
   }
 
+  function estimateSavingsFromUsage(totals = {}) {
+    const profileSavings = { small: 0.35, balanced: 0.25, large: 0.15 };
+    const profileKey = state.settings?.modelProfile || 'balanced';
+    const baseRate = profileSavings[profileKey] ?? 0.2;
+    const optimizerBonus = state.settings?.optimizerEnabled ? 0.1 : 0;
+    const remoteBonus = state.settings?.remoteOptimizer ? 0.05 : 0;
+    const rate = Math.min(0.9, baseRate + optimizerBonus + remoteBonus);
+    return {
+      Wh: (totals.Wh || 0) * rate,
+      gCO2: (totals.gCO2 || 0) * rate,
+      waterMl: (totals.waterMl || 0) * rate,
+      rate
+    };
+  }
+
   function buildLocalWrappedCards(totals) {
-    const ledMinutes = totals.Wh ? (totals.Wh / 0.008).toFixed(1) : '0';
-    const scooterKm = totals.gCO2 ? (totals.gCO2 / 12).toFixed(1) : '0';
-    const waterPerc = totals.waterMl ? ((totals.waterMl / 9500) * 100).toFixed(1) : '0';
+    const savings = estimateSavingsFromUsage(totals);
+    const ledMinutesSaved = savings.Wh ? (savings.Wh / 0.008).toFixed(1) : '0';
+    const phoneChargesSaved = savings.Wh ? (savings.Wh / 11).toFixed(1) : '0';
+    const scooterKmSaved = savings.gCO2 ? (savings.gCO2 / 12).toFixed(1) : '0';
+    const waterPercSaved = savings.waterMl ? ((savings.waterMl / 9500) * 100).toFixed(1) : '0';
+    const bottleRefills = savings.waterMl ? (savings.waterMl / 500).toFixed(1) : '0';
     return [
       {
-        title: 'Energy Mood',
-        statLabel: 'Wh burned',
-        statValue: `${totals.Wh.toFixed(2)} Wh`,
-        analogy: totals.Wh
-          ? `Roughly the juice of a smart speaker vibing for ${ledMinutes} minutes.`
-          : 'No watts logged yet — spotless record!',
-        tip: 'Batch requests instead of sending every micro-thought.'
+        title: 'Energy Giveback',
+        statLabel: 'Wh saved',
+        statValue: `${savings.Wh.toFixed(2)} Wh`,
+        analogy: savings.Wh
+          ? `You kept roughly ${ledMinutesSaved} minutes of LED glow off — about ${phoneChargesSaved} phone charges avoided.`
+          : 'Once optimizations kick in, your saved watts will show up here.',
+        tip: 'Bundle related prompts so you reuse model context instead of starting from scratch.'
       },
       {
-        title: 'Carbon Chorus',
-        statLabel: 'CO₂',
-        statValue: `${totals.gCO2.toFixed(2)} g`,
-        analogy: totals.gCO2
-          ? `Similar to a ${scooterKm} km e-scooter ride worth of CO₂.`
-          : 'Ask something new to reveal your carbon chorus.',
-        tip: 'Reuse earlier answers before generating fresh ones.'
+        title: 'Carbon Cut',
+        statLabel: 'CO₂ saved',
+        statValue: `${savings.gCO2.toFixed(2)} g`,
+        analogy: savings.gCO2
+          ? `Dodged the CO₂ from a ${scooterKmSaved} km e-scooter ride by keeping conversations lean.`
+          : 'Ask something new and reuse context to unlock your carbon cuts.',
+        tip: 'Accept optimizer suggestions or trim inputs before sending long drafts.'
       },
       {
-        title: 'Water Remix',
-        statLabel: 'Water',
-        statValue: `${totals.waterMl.toFixed(0)} mL`,
-        analogy: totals.waterMl
-          ? `About ${waterPerc}% of a short shower — still a small splash.`
-          : 'Keep riffing to see the ripple effect.',
-        tip: 'Stay text-only to minimize the water sample rate.'
+        title: 'Water Steward',
+        statLabel: 'Water saved',
+        statValue: `${savings.waterMl.toFixed(0)} mL`,
+        analogy: savings.waterMl
+          ? `Protected about ${waterPercSaved}% of a short shower — roughly ${bottleRefills} reusable bottles of water.`
+          : 'Keep refining prompts to see the ripple effect of water savings.',
+        tip: 'Stay text-first and limit regenerations when visuals aren’t required.'
       }
     ];
   }
@@ -1047,13 +1065,15 @@
 
   function getChatStats() {
     const totals = { Wh: 0, gCO2: 0, waterMl: 0 };
-    const conversationId = state.conversationId;
+    const conversationId = state.conversationId || getConversationId();
     if (!conversationId) {
       return { totals, entries: 0 };
     }
+    const todayKey = getTodayKey();
     let entries = 0;
     state.history.forEach((entry) => {
       if (entry.conversationId !== conversationId) return;
+      if (getDateKey(entry.timestamp) !== todayKey) return;
       entries += 1;
       totals.Wh += entry.Wh || 0;
       totals.gCO2 += entry.gCO2 || 0;
@@ -1456,7 +1476,15 @@
       const resp = await fetch(`${REMOTE_API_BASE}/wrapped`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ totals, dateLabel }),
+        body: JSON.stringify({
+          totals,
+          dateLabel,
+          settings: {
+            modelProfile: state.settings?.modelProfile,
+            optimizerEnabled: state.settings?.optimizerEnabled,
+            remoteOptimizer: state.settings?.remoteOptimizer
+          }
+        }),
         signal
       });
       const text = await resp.text();

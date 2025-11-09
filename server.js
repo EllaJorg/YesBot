@@ -65,7 +65,7 @@ app.post("/optimize", async (req, res) => {
   }
 });
 
-const WRAPPED_SYSTEM = `You are Alba's climate storyteller. Given daily energy (Wh), carbon (gCO2), and water (mL) totals from AI usage, you craft a playful Spotify Wrapped style recap with vivid but credible analogies. Respond ONLY with JSON matching this schema:
+const WRAPPED_SYSTEM = `You are Alba's climate storyteller. Given daily energy (Wh), carbon (gCO2), and water (mL) totals from AI usage plus estimated savings, craft a recap that celebrates resources avoided. Respond ONLY with JSON matching this schema:
 {
   "headline": string,
   "subhead": string,
@@ -83,22 +83,25 @@ const WRAPPED_SYSTEM = `You are Alba's climate storyteller. Given daily energy (
 }
 
 Guidelines:
-- Tone: upbeat, musical, confident, 1-2 sentences per field.
-- Analogy: connect each stat to intuitive objects (smart speakers, bike rides, kettle boils, playlists, etc.).
+- Tone: upbeat, climate-savvy, confident, 1-2 sentences per field (skip heavy music references).
+- Analogy: mix home energy, public transit, hydration, nature, and household objects so it feels tangible.
+- Use the provided savings.* values for statValue + analogy (describe them as energy/carbon/water saved); mention totals.* only for context.
 - Keep numbers realistic. Convert units to kWh, grams, minutes, liters when it improves clarity.
 - Limit cards to 3 entries.`;
 
 app.post("/wrapped", async (req, res) => {
   const totals = req.body?.totals || {};
   const dateLabel = req.body?.dateLabel || new Date().toISOString().slice(0, 10);
+  const settings = req.body?.settings || {};
   const metrics = {
     Wh: coerceNumber(totals.Wh),
     gCO2: coerceNumber(totals.gCO2),
     waterMl: coerceNumber(totals.waterMl)
   };
+  const savings = estimateSavingsFromUsage(metrics, settings);
 
   try {
-    const promptPayload = JSON.stringify({ dateLabel, totals: metrics });
+    const promptPayload = JSON.stringify({ dateLabel, totals: metrics, savings });
     const resp = await client.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
@@ -114,10 +117,10 @@ app.post("/wrapped", async (req, res) => {
     if (parsed) {
       return res.json(parsed);
     }
-    return res.json(buildFallbackWrapped(metrics, dateLabel));
+    return res.json(buildFallbackWrapped(metrics, savings, dateLabel));
   } catch (err) {
     console.error("wrapped error:", err);
-    return res.status(500).json(buildFallbackWrapped(metrics, dateLabel));
+    return res.status(500).json(buildFallbackWrapped(metrics, savings, dateLabel));
   }
 });
 
@@ -135,47 +138,75 @@ function extractJson(text) {
   }
 }
 
-function buildFallbackWrapped(totals, dateLabel) {
-  const kWh = totals.Wh / 1000;
-  const ledMinutes = totals.Wh > 0 ? (totals.Wh / 0.008).toFixed(1) : "0";
+function estimateSavingsFromUsage(totals = {}, settings = {}) {
+  const profileSavings = { small: 0.35, balanced: 0.25, large: 0.15 };
+  const profileKey = settings.modelProfile || "balanced";
+  const baseRate = profileSavings[profileKey] ?? 0.2;
+  const optimizerBonus = settings.optimizerEnabled ? 0.1 : 0;
+  const remoteBonus = settings.remoteOptimizer ? 0.05 : 0;
+  const rate = Math.min(0.9, baseRate + optimizerBonus + remoteBonus);
+  return {
+    Wh: (totals.Wh || 0) * rate,
+    gCO2: (totals.gCO2 || 0) * rate,
+    waterMl: (totals.waterMl || 0) * rate,
+    rate
+  };
+}
+
+function buildFallbackWrapped(totals, savings, dateLabel) {
+  const resolvedSavings = savings || estimateSavingsFromUsage(totals);
+  const kWhSaved = resolvedSavings.Wh / 1000;
+  const ledMinutesSaved =
+    resolvedSavings.Wh > 0 ? (resolvedSavings.Wh / 0.008).toFixed(1) : "0";
+  const phoneChargesSaved =
+    resolvedSavings.Wh > 0 ? (resolvedSavings.Wh / 11).toFixed(1) : "0";
+  const scooterKmSaved =
+    resolvedSavings.gCO2 > 0 ? (resolvedSavings.gCO2 / 12).toFixed(1) : "0";
   const showerMl = 9500;
-  const waterPerc = showerMl ? ((totals.waterMl / showerMl) * 100).toFixed(1) : "0";
+  const waterPercSaved = showerMl
+    ? ((resolvedSavings.waterMl / showerMl) * 100).toFixed(1)
+    : "0";
+  const bottleRefills =
+    resolvedSavings.waterMl > 0 ? (resolvedSavings.waterMl / 500).toFixed(1) : "0";
   return {
     headline: `Alba Eco Wrapped · ${dateLabel}`,
-    subhead: totals.Wh
-      ? `Today's AI groove used ${totals.Wh.toFixed(2)} Wh — a ${kWh.toFixed(3)} kWh micro tour.`
-      : "No recorded energy today, so your vibe stayed off the grid.",
+    subhead: resolvedSavings.Wh
+      ? `Optimizing kept ${resolvedSavings.Wh.toFixed(2)} Wh (${kWhSaved.toFixed(
+          3
+        )} kWh) off the grid today.`
+      : "No recorded savings yet — keep nudging prompts leaner and they'll show up here.",
     cards: [
       {
-        title: "Energy Mood",
-        statLabel: "Watt-hours",
-        statValue: `${totals.Wh.toFixed(2)} Wh`,
-        analogy: totals.Wh
-          ? `Roughly the same spark as running an LED strip for ${ledMinutes} minutes.`
-          : "Once data rolls in you'll see how your power groove compares.",
-        tip: "Short, pointed prompts keep this meter low tomorrow."
+        title: "Energy Giveback",
+        statLabel: "Wh saved",
+        statValue: `${resolvedSavings.Wh.toFixed(2)} Wh`,
+        analogy: resolvedSavings.Wh
+          ? `Enough electricity saved to keep LED lights off for ${ledMinutesSaved} minutes and skip ${phoneChargesSaved} phone charges.`
+          : "As soon as optimizations land, you'll see your watt savings here.",
+        tip: "Batch similar asks so you don't boot a fresh model for each one."
       },
       {
-        title: "Carbon Chorus",
-        statLabel: "CO₂",
-        statValue: `${totals.gCO2.toFixed(2)} g`,
-        analogy: totals.gCO2
-          ? `Comparable to a sip of seltzer's fizz turning into ${totals.gCO2.toFixed(2)} grams of CO₂.`
-          : "Add a prompt to get a carbon chorus.",
-        tip: "Try batching follow-up questions so you reuse the same response instead of generating new ones."
+        title: "Carbon Cut",
+        statLabel: "CO₂ saved",
+        statValue: `${resolvedSavings.gCO2.toFixed(2)} g`,
+        analogy: resolvedSavings.gCO2
+          ? `Avoided the CO₂ from a ${scooterKmSaved} km e-scooter trip by reusing context instead of regenerating output.`
+          : "Log a prompt and reuse context to start charting carbon cuts.",
+        tip: "Accept optimizer tips or trim drafts before sending to keep emissions down."
       },
       {
-        title: "Water Remix",
-        statLabel: "Water",
-        statValue: `${totals.waterMl.toFixed(0)} mL`,
-        analogy: totals.waterMl
-          ? `About ${waterPerc}% of a quick shower's freshwater cost.`
-          : "Keep riffing and we'll show the ripple.",
-        tip: "Images and audio inputs cost more water — stay text-only when you can."
+        title: "Water Steward",
+        statLabel: "Water saved",
+        statValue: `${resolvedSavings.waterMl.toFixed(0)} mL`,
+        analogy: resolvedSavings.waterMl
+          ? `Protected about ${waterPercSaved}% of a short shower — roughly ${bottleRefills} reusable bottles of clean water.`
+          : "Keep prompts concise to see water savings ripple outward.",
+        tip: "Stay text-first and avoid unnecessary regenerations when visuals aren't required."
       }
     ],
-    cta: "Pause between prompts and remix with low-energy models to drop tomorrow's beat.",
-    footnote: "Estimates use Alba defaults only — consider this a vibe check, not a utility bill."
+    cta: "Reuse context, embrace optimizer tips, and bank even more resource savings tomorrow.",
+    footnote:
+      "Estimates use Alba defaults only — treat this as an optimistic savings snapshot, not a utility bill."
   };
 }
 
