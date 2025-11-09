@@ -105,7 +105,9 @@
     assistantObserver: null,
     site: SITE_CONFIGS.find((config) => config.hostPattern.test(window.location.hostname)),
     debounceTimers: new WeakMap(),
-    featuresActive: false
+    featuresActive: false,
+    conversationId: null,
+    locationTrackerInitialized: false
   };
 
   if (!state.site) {
@@ -115,6 +117,8 @@
   init();
 
   function init() {
+    state.conversationId = getConversationId();
+    startConversationTracking();
     loadPersistedState().then(() => {
       chrome.storage.onChanged.addListener(handleStorageChange);
       if (state.settings.enabled) {
@@ -146,7 +150,6 @@
       controller.input.removeEventListener('keyup', controller.listener);
       controller.input.removeEventListener('blur', controller.listener);
       controller.container.remove();
-      controller.root?.removeAttribute('data-alba-prompt-attached');
       delete controller.host.dataset.albaAttached;
     });
     state.promptControllers.clear();
@@ -226,23 +229,19 @@
       document.querySelectorAll(selector).forEach((input) => {
         const resolved = resolveEditableTarget(input);
         if (!resolved || resolved.dataset.albaAttached) return;
-        const hostRoot = getPromptRoot(resolved);
-        if (hostRoot?.dataset.albaPromptAttached) return;
         resolved.dataset.albaAttached = 'true';
-        if (hostRoot) hostRoot.dataset.albaPromptAttached = 'true';
-        createPromptController(resolved, hostRoot);
+        createPromptController(resolved);
       });
     });
   }
 
-  function createPromptController(editableTarget, hostRoot) {
+  function createPromptController(editableTarget) {
     const controller = {
       host: editableTarget,
       input: editableTarget,
       container: document.createElement('div'),
       optimizeButton: document.createElement('button'),
       previewText: document.createElement('span'),
-      root: hostRoot || editableTarget.closest('form') || editableTarget.parentElement,
       inlineSuggestion: null,
       lastEstimate: null,
       lastOptimizedText: null,
@@ -251,8 +250,8 @@
 
     controller.container.className = 'alba-optimizer-bar';
     applyTheme(controller.container);
-    // controller.previewText.className = 'alba-optimizer-preview';
-    //controller.previewText.textContent = 'alba | Impact unknown';
+    controller.previewText.className = 'alba-optimizer-preview';
+    //controller.previewText.textContent = 'Alba';
 
     controller.optimizeButton.className = 'alba-optimizer-action';
     controller.optimizeButton.type = 'button';
@@ -266,7 +265,7 @@
     controller.container.appendChild(controller.previewText);
     controller.container.appendChild(controller.optimizeButton);
 
-    const parent = controller.root || editableTarget.closest('form') || editableTarget.parentElement;
+    const parent = editableTarget.closest('form') || editableTarget.parentElement;
     (parent || editableTarget).appendChild(controller.container);
 
     const listener = () => {
@@ -289,7 +288,6 @@
         host.removeEventListener('keyup', controller.listener);
         host.removeEventListener('blur', controller.listener);
         controller.container.remove();
-        controller.root?.removeAttribute('data-alba-prompt-attached');
         delete host.dataset.albaAttached;
         state.promptControllers.delete(host);
       }
@@ -457,7 +455,7 @@
   function updatePromptEstimate(controller) {
     const text = (getInputText(controller.input) || '').trim();
     if (!text) {
-      controller.previewText.textContent = 'alba | Impact unknown';
+      controller.previewText.textContent = 'Alba';
       controller.lastEstimate = null;
       return;
     }
@@ -476,7 +474,7 @@
     const estimate = estimateImpact(estimateConfig);
     if (!estimate) {
       controller.lastEstimate = null;
-      controller.previewText.textContent = 'alba | Impact unknown';
+      controller.previewText.textContent = 'Alba';
     } else {
       controller.lastEstimate = estimate;
       controller.previewText.textContent = formatImpactLine(estimate);
@@ -582,6 +580,7 @@
       site: state.site.id,
       source,
       modality,
+      conversationId: state.conversationId,
       chars: text.length,
       tokens: estimate.tokens,
       Wh: estimate.Wh,
@@ -617,6 +616,24 @@
     const card = document.createElement('div');
     card.className = 'alba-widget-card';
 
+    const tabs = document.createElement('div');
+    tabs.className = 'alba-widget-tabs';
+
+    const todayTab = document.createElement('button');
+    todayTab.type = 'button';
+    todayTab.className = 'alba-widget-tab';
+    todayTab.dataset.tab = 'today';
+    todayTab.textContent = "Today's Impact";
+
+    const chatTab = document.createElement('button');
+    chatTab.type = 'button';
+    chatTab.className = 'alba-widget-tab';
+    chatTab.dataset.tab = 'chat';
+    chatTab.textContent = 'This Chat';
+
+    tabs.appendChild(todayTab);
+    tabs.appendChild(chatTab);
+
     const totals = document.createElement('div');
     totals.className = 'alba-widget-totals';
 
@@ -642,6 +659,7 @@
     buttons.appendChild(exportBtn);
     buttons.appendChild(resetBtn);
 
+    card.appendChild(tabs);
     card.appendChild(totals);
     card.appendChild(comparison);
     card.appendChild(delta);
@@ -655,7 +673,35 @@
     });
 
     document.body.appendChild(widget);
-    state.widget = { root: widget, totalsEl: totals, comparisonEl: comparison, deltaEl: delta };
+    const previousTab = state.widget?.activeTab || 'today';
+    state.widget = {
+      root: widget,
+      totalsEl: totals,
+      comparisonEl: comparison,
+      deltaEl: delta,
+      tabs: { container: tabs, today: todayTab, chat: chatTab },
+      activeTab: previousTab
+    };
+
+    todayTab.addEventListener('click', () => setWidgetTab('today'));
+    chatTab.addEventListener('click', () => setWidgetTab('chat'));
+
+    setWidgetTab(previousTab);
+  }
+
+  function setWidgetTab(tab) {
+    if (!state.widget) return;
+    const nextTab = tab === 'chat' ? 'chat' : 'today';
+    state.widget.activeTab = nextTab;
+    const tabs = state.widget.tabs || {};
+    const todayBtn = tabs.today;
+    const chatBtn = tabs.chat;
+    if (todayBtn) {
+      todayBtn.classList.toggle('alba-active', nextTab === 'today');
+    }
+    if (chatBtn) {
+      chatBtn.classList.toggle('alba-active', nextTab === 'chat');
+    }
     renderWidgetTotals();
   }
 
@@ -663,23 +709,36 @@
     if (!state.widget) return;
     const key = getTodayKey();
     ensureDailyTotalsKey(key);
-    console.log(state);
-    const totals = state.dailyTotals[key];
-    const previous = state.dailyTotals[getPreviousDayKey(key)] || { Wh: 0, gCO2: 0, waterMl: 0 };
-    const tooltipCopy = formatTotalsTooltip(totals);
+    const todayTotals = state.dailyTotals[key];
+    const activeTab = state.widget.activeTab || 'today';
+    const chatStats = getChatStats();
+    const displayTotals = activeTab === 'chat' ? chatStats.totals : todayTotals;
+    const heading = activeTab === 'chat' ? 'This Chat' : "Today's Totals";
+    const tooltipCopy = formatTotalsTooltip(displayTotals);
     state.widget.totalsEl.innerHTML =
-      `<strong>Today's Totals</strong>
+      `<strong>${heading}</strong>
        <div class="alba-widget-totals-line alba-tooltip-host">
-         ${totals.Wh.toFixed(2)} Wh | ${totals.gCO2.toFixed(2)} g CO2 | ${totals.waterMl.toFixed(0)} mL
+         ${displayTotals.Wh.toFixed(2)} Wh | ${displayTotals.gCO2.toFixed(2)} g CO2 | ${displayTotals.waterMl.toFixed(0)} mL
          <div class="alba-tooltip">${tooltipCopy}</div>
        </div>`;
-    state.widget.comparisonEl.textContent = formatComparison(totals.Wh);
-    const deltaWh = totals.Wh - previous.Wh;
-    const arrow = deltaWh >= 0 ? '+' : '-';
-    const deltaText = `${arrow}${Math.abs(deltaWh).toFixed(2)} Wh vs yesterday`;
-    state.widget.deltaEl.textContent = deltaText;
+    if (activeTab === 'today') {
+      const previous = state.dailyTotals[getPreviousDayKey(key)] || { Wh: 0, gCO2: 0, waterMl: 0 };
+      state.widget.comparisonEl.textContent = formatComparison(todayTotals.Wh);
+      const deltaWh = todayTotals.Wh - previous.Wh;
+      const arrow = deltaWh >= 0 ? '+' : '-';
+      const deltaText = `${arrow}${Math.abs(deltaWh).toFixed(2)} Wh vs yesterday`;
+      state.widget.deltaEl.textContent = deltaText;
+    } else {
+      if (chatStats.entries > 0) {
+        state.widget.comparisonEl.textContent = `${chatStats.entries} tracked message${chatStats.entries === 1 ? '' : 's'} in this chat`;
+        state.widget.deltaEl.textContent = 'Totals reset when you switch chats.';
+      } else {
+        state.widget.comparisonEl.textContent = 'No impact recorded in this chat yet.';
+        state.widget.deltaEl.textContent = '';
+      }
+    }
     const budgetWh = 10; // Adjustable daily reference for ring progress.
-    const progress = Math.min(1, totals.Wh / budgetWh);
+    const progress = Math.min(1, (displayTotals.Wh || 0) / budgetWh);
     state.widget.root.style.setProperty('--alba-progress', progress.toString());
   }
 
@@ -729,6 +788,23 @@
     renderWidgetTotals();
   }
 
+  function getChatStats() {
+    const totals = { Wh: 0, gCO2: 0, waterMl: 0 };
+    const conversationId = state.conversationId;
+    if (!conversationId) {
+      return { totals, entries: 0 };
+    }
+    let entries = 0;
+    state.history.forEach((entry) => {
+      if (entry.conversationId !== conversationId) return;
+      entries += 1;
+      totals.Wh += entry.Wh || 0;
+      totals.gCO2 += entry.gCO2 || 0;
+      totals.waterMl += entry.waterMl || 0;
+    });
+    return { totals, entries };
+  }
+
   function getInputText(input) {
     if (!input) return '';
     if (typeof input.value === 'string') {
@@ -752,6 +828,43 @@
     } else {
       input.textContent = text;
     }
+  }
+
+  function startConversationTracking() {
+    if (state.locationTrackerInitialized) return;
+    state.locationTrackerInitialized = true;
+
+    const handleChange = () => {
+      const nextId = getConversationId();
+      if (!nextId || nextId === state.conversationId) return;
+      state.conversationId = nextId;
+      renderWidgetTotals();
+    };
+
+    const patchHistoryMethod = (method) => {
+      const original = history[method];
+      if (typeof original !== 'function' || original.__albaWrapped) return;
+      const wrapped = function (...args) {
+        const result = original.apply(this, args);
+        setTimeout(handleChange, 0);
+        return result;
+      };
+      wrapped.__albaWrapped = true;
+      history[method] = wrapped;
+    };
+
+    ['pushState', 'replaceState'].forEach(patchHistoryMethod);
+    window.addEventListener('popstate', handleChange);
+    setInterval(handleChange, 2000);
+  }
+
+  function getConversationId() {
+    const path = window.location.pathname || '/';
+    const chatMatch = path.match(/\/c\/([^/]+)/);
+    const identifier = chatMatch ? chatMatch[1] : path || 'root';
+    const search = window.location.search || '';
+    const siteId = state.site?.id || window.location.hostname || 'site';
+    return `${siteId}:${identifier}${search}`;
   }
 
   function detectModality(text) {
@@ -814,17 +927,17 @@
   }
 
   function formatImpactLine(estimate) {
-    if (!estimate) return 'alba | Impact unknown';
+    if (!estimate) return 'Alba';
     return `Estimated Impact: ⚡${estimate.Wh.toFixed(3)} Wh | 🌎 ${estimate.gCO2.toFixed(3)} g CO2 | 💧 ${estimate.waterMl.toFixed(3)} mL H2O`;
   }
 
   function formatOriginal(estimate) {
-    if (!estimate) return 'alba | Impact unknown';
+    if (!estimate) return 'Alba';
     return `Original Impact: ⚡${estimate.Wh.toFixed(3)} Wh | 🌎 ${estimate.gCO2.toFixed(3)} g CO2 | 💧 ${estimate.waterMl.toFixed(3)} mL H2O`;
   }
 
   function formatOptimized(estimate) {
-    if (!estimate) return 'alba | Impact unknown';
+    if (!estimate) return 'Alba';
     return `Optimized Impact: ⚡${estimate.Wh.toFixed(3)} Wh | 🌎 ${estimate.gCO2.toFixed(3)} g CO2 | 💧 ${estimate.waterMl.toFixed(3)} mL H2O`;
   }
   
@@ -965,16 +1078,6 @@
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
-  }
-
-  function getPromptRoot(element) {
-    if (!element) return null;
-    return (
-      element.closest('form') ||
-      element.closest('[role="form"]') ||
-      element.closest('[data-testid="prompt-editor"],[data-testid="prompt-form"]') ||
-      element.parentElement
-    );
   }
 
   function resolveEditableTarget(element) {

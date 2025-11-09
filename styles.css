@@ -264,6 +264,34 @@
   display: none;
 }
 
+.alba-widget-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  background: rgba(255, 255, 255, 0.65);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+.alba-widget-tab {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--alba-charcoal);
+  transition: all 120ms ease;
+}
+
+.alba-widget-tab.alba-active {
+  background: var(--alba-sage);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
 .alba-widget.alba-open .alba-widget-card {
   display: block;
 }
