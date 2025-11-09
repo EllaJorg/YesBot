@@ -9,6 +9,11 @@
       { type: 'led', label: 'Equivalent to leaving an LED bulb on', factorWh: 0.008 },
       { type: 'car', label: 'mini EV meters', factorWh: 0.15 }
     ],
+    themes: {
+      light: { label: 'Light', description: 'Airy default palette' },
+      dark: { label: 'Dark', description: 'Low-light emerald tones' },
+      contrast: { label: 'High Contrast', description: 'Bold palette for color vision support' }
+    },
     modalKeywords: {
       image: ['generate an image', 'draw', 'photo of', 'illustration', 'picture of'],
       audio: ['audio', 'transcribe', 'podcast'],
@@ -66,6 +71,7 @@
       optimizerEnabled: true,
       modelProfile: 'balanced',
       region: 'global',
+      theme: 'light',
       remoteOptimizer: true  // Enable remote optimizer by default (requires server running)
     }
   };

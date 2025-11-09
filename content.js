@@ -175,6 +175,7 @@
           }
           state.dailyTotals = data[ALBA_STORAGE_KEYS.totals] || {};
           state.history = data[ALBA_STORAGE_KEYS.history] || [];
+          refreshThemeTokens();
           resolve();
         }
       );
@@ -191,6 +192,7 @@
     if (area !== 'sync') return;
     if (changes[ALBA_STORAGE_KEYS.settings]) {
       const prevEnabled = state.settings.enabled;
+      const prevTheme = state.settings.theme;
       state.settings = {
         ...ALBA_CONFIG.defaultSettings,
         ...changes[ALBA_STORAGE_KEYS.settings].newValue
@@ -198,6 +200,9 @@
       state.promptControllers.forEach((controller) => {
         controller.optimizeButton.disabled = !state.settings.optimizerEnabled;
       });
+      if (state.settings.theme !== prevTheme) {
+        refreshThemeTokens();
+      }
       if (!state.settings.enabled && prevEnabled) {
         teardownFeatures();
       } else if (state.settings.enabled && !prevEnabled) {
@@ -988,10 +993,27 @@
     return new Date(timestamp).toISOString().slice(0, 10);
   }
 
+  function getActiveThemeKey() {
+    const theme = state.settings?.theme;
+    if (ALBA_CONFIG.themes && theme && ALBA_CONFIG.themes[theme]) {
+      return theme;
+    }
+    return 'light';
+  }
+
   function applyTheme(element) {
-    if (element && element.classList && !element.classList.contains('alba-theme')) {
+    if (!element || !element.classList) return;
+    if (!element.classList.contains('alba-theme')) {
       element.classList.add('alba-theme');
     }
+    element.dataset.albaTheme = getActiveThemeKey();
+  }
+
+  function refreshThemeTokens() {
+    const themeKey = getActiveThemeKey();
+    document.querySelectorAll('.alba-theme').forEach((node) => {
+      node.dataset.albaTheme = themeKey;
+    });
   }
 
   function countContentImages(container) {

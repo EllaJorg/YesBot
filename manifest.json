@@ -21,10 +21,10 @@
       "matches": [
         "https://chat.openai.com/*",
         "https://chatgpt.com/*",
-        "https://claude.ai/*",
-        "https://gemini.google.com/*",
-        "https://perplexity.ai/*",
-        "https://www.perplexity.ai/*"
+        "https://claude.ai/",
+        "https://gemini.google.com/",
+        "https://perplexity.ai/",
+        "https://www.perplexity.ai/"
       ],
       "css": ["styles.css"],
       "js": ["energyConfig.js", "content.js"],

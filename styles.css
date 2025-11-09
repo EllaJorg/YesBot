@@ -2,10 +2,52 @@
   --alba-sage: #6aa484;
   --alba-sage-dark: #4f866b;
   --alba-charcoal: #1f2b27;
+  --alba-text: #1f2b27;
+  --alba-text-muted: #5a6a63;
   --alba-cream: rgba(252, 252, 250, 0.92);
   --alba-border: rgba(31, 43, 39, 0.12);
   --alba-shadow: 0 8px 24px rgba(19, 26, 23, 0.15);
   --alba-font: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --alba-surface: rgba(255, 255, 255, 0.85);
+  --alba-surface-muted: rgba(255, 255, 255, 0.65);
+  --alba-surface-soft: rgba(255, 255, 255, 0.7);
+  --alba-surface-strong: #ffffff;
+  --alba-pill-bg: rgba(255, 255, 255, 0.85);
+  --alba-control-bg: #ffffff;
+}
+
+.alba-theme[data-alba-theme="dark"] {
+  --alba-sage: #8bd8b5;
+  --alba-sage-dark: #5ca284;
+  --alba-charcoal: #0f1a17;
+  --alba-text: #f3faf4;
+  --alba-text-muted: rgba(243, 250, 244, 0.75);
+  --alba-cream: rgba(18, 25, 22, 0.94);
+  --alba-border: rgba(232, 247, 240, 0.22);
+  --alba-shadow: 0 18px 32px rgba(0, 0, 0, 0.55);
+  --alba-surface: rgba(30, 42, 36, 0.92);
+  --alba-surface-muted: rgba(255, 255, 255, 0.07);
+  --alba-surface-soft: rgba(255, 255, 255, 0.12);
+  --alba-surface-strong: rgba(40, 55, 49, 0.98);
+  --alba-pill-bg: rgba(40, 55, 49, 0.9);
+  --alba-control-bg: rgba(40, 55, 49, 0.98);
+}
+
+.alba-theme[data-alba-theme="contrast"] {
+  --alba-sage: #1fbba6;
+  --alba-sage-dark: #0d6f62;
+  --alba-charcoal: #0e1f2c;
+  --alba-text: #0e1f2c;
+  --alba-text-muted: #14384d;
+  --alba-cream: #fdfbef;
+  --alba-border: rgba(14, 31, 44, 0.25);
+  --alba-shadow: 0 12px 28px rgba(20, 32, 41, 0.25);
+  --alba-surface: #ffffff;
+  --alba-surface-muted: #f1f5ff;
+  --alba-surface-soft: rgba(255, 255, 255, 0.95);
+  --alba-surface-strong: #ffffff;
+  --alba-pill-bg: #ffffff;
+  --alba-control-bg: #ffffff;
 }
 
 .alba-impact-label {
@@ -19,9 +61,9 @@
   margin-left: auto;
   align-self: flex-end;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--alba-pill-bg);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   font-size: 12px;
   cursor: default;
 }
@@ -128,7 +170,7 @@
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
 }
 
 .alba-panel-body {
@@ -138,7 +180,7 @@
 }
 
 .alba-prompt-block {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--alba-surface-muted);
   border-radius: 14px;
   border: 1px solid var(--alba-border);
   padding: 10px;
@@ -151,7 +193,7 @@
   position: absolute;
   inset: 0;
   backdrop-filter: blur(2px);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--alba-surface-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -169,13 +211,13 @@
 
 .alba-block-content {
   font-size: 13px;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   white-space: pre-wrap;
 }
 
 .alba-panel-stats {
   font-size: 12px;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   padding: 8px 10px;
   background: rgba(106, 164, 132, 0.12);
   border-radius: 12px;
@@ -191,7 +233,7 @@
   border: 1px solid var(--alba-border);
   border-radius: 999px;
   padding: 6px 14px;
-  background: #fff;
+  background: var(--alba-surface-strong);
   cursor: pointer;
   font-size: 12px;
 }
@@ -216,7 +258,7 @@
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   font-weight: 600;
   box-shadow: var(--alba-shadow);
   cursor: pointer;
@@ -268,10 +310,10 @@
   display: flex;
   gap: 8px;
   margin-bottom: 12px;
-  background: rgba(255, 255, 255, 0.65);
+  background: var(--alba-surface-muted);
   padding: 4px;
   border-radius: 999px;
-  border: 1px solid rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--alba-border);
 }
 
 .alba-widget-tab {
@@ -282,7 +324,7 @@
   font-size: 12px;
   cursor: pointer;
   background: transparent;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   transition: all 120ms ease;
 }
 
@@ -316,7 +358,7 @@
 
 .alba-widget-delta {
   font-size: 12px;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   margin-bottom: 10px;
 }
 
@@ -330,7 +372,7 @@
   flex: 1;
   border-radius: 999px;
   border: 1px solid var(--alba-border);
-  background: #fff;
+  background: var(--alba-surface-strong);
   padding: 6px 0;
   cursor: pointer;
   font-size: 12px;
@@ -383,18 +425,18 @@
 .alba-suggestion-savings {
   font-size: 11px;
   color: var(--alba-sage-dark);
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--alba-surface-muted);
   padding: 3px 8px;
   border-radius: 999px;
   font-weight: 500;
 }
 
 .alba-suggestion-content {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--alba-surface);
   border-radius: 10px;
   padding: 10px;
   font-size: 13px;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   line-height: 1.5;
   margin-bottom: 10px;
   white-space: pre-wrap;
@@ -404,7 +446,7 @@
 
 .alba-suggestion-impact {
   font-size: 13px;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   line-height: 1.5;
   margin-bottom: 10px;
 }
@@ -431,12 +473,12 @@
 }
 
 .alba-suggestion-dismiss {
-  background: #fff;
-  color: var(--alba-charcoal);
+  background: var(--alba-surface-strong);
+  color: var(--alba-text);
 }
 
 .alba-suggestion-dismiss:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--alba-surface-muted);
 }
 
 .alba-suggestion-accept {
