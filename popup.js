@@ -83,8 +83,8 @@
     if (!Wh || Wh <= 0) return 'No impact recorded yet today.';
     const baseline = ALBA_CONFIG.baselineComparisons && ALBA_CONFIG.baselineComparisons[0];
     if (!baseline || !baseline.factorWh) return 'Comparable impact unavailable.';
-    const value = Wh / baseline.factorWh;
-    return `${value.toFixed(1)} ${baseline.label}`;
+    const value = (Wh / baseline.factorWh).toFixed(1);
+    return `${baseline.label} for ${value} minutes`;
   }
 
   function formatTotalsTooltip(totals) {

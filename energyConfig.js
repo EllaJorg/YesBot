@@ -6,7 +6,7 @@
     debounceMs: 300,
     responseDelayMs: 500,
     baselineComparisons: [
-      { type: 'led', label: 'LED bulb minutes', factorWh: 0.008 },
+      { type: 'led', label: 'Equivalent to leaving an LED bulb on', factorWh: 0.008 },
       { type: 'car', label: 'mini EV meters', factorWh: 0.15 }
     ],
     modalKeywords: {

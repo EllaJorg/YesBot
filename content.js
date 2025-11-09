@@ -154,7 +154,7 @@
       state.widget.root.remove();
     }
     state.widget = null;
-    document.querySelectorAll('.alba-impact-label, .alba-optimizer-panel, .alba-inline-suggestion').forEach((node) => node.remove());
+    document.querySelectorAll('.alba-impact-label, .alba-inline-suggestion').forEach((node) => node.remove());
   }
 
   function loadPersistedState() {
@@ -367,9 +367,11 @@
       images: 0
     });
 
-    const savings = originalImpact && optimizedImpact
-      ? ((originalImpact.Wh - optimizedImpact.Wh) / originalImpact.Wh * 100).toFixed(0)
-      : 0;
+    const gramsSavings = originalImpact && optimizedImpact ? (originalImpact.gCO2 - optimizedImpact.gCO2) : 0;
+    const percentSavings =
+      originalImpact && optimizedImpact && originalImpact.Wh > 0
+        ? ((originalImpact.Wh - optimizedImpact.Wh) / originalImpact.Wh) * 100
+        : 0;
 
     // Remove existing suggestion if any
     hideInlineSuggestion(controller);
@@ -382,13 +384,26 @@
     const header = document.createElement('div');
     header.className = 'alba-suggestion-header';
     header.innerHTML = `
-      <span class="alba-suggestion-badge">${source === 'remote' ? 'AI Optimized' : 'Quick Optimization'}</span>
-      <span class="alba-suggestion-savings">${savings > 0 ? `Save ${savings}% energy` : 'Optimized'}</span>
+      <span class="alba-suggestion-badge">${source === 'remote' ? 'Optimized' : 'Quick Optimization'}</span>
+      <span class="alba-suggestion-savings">
+        ${
+          percentSavings > 0
+            ? `Reduced Footprint ${percentSavings.toFixed(0)}%`
+            : 'Optimized'
+        }
+      </span>
     `;
 
     const content = document.createElement('div');
     content.className = 'alba-suggestion-content';
     content.textContent = optimizedText;
+
+    const impacts = document.createElement('div');
+    impacts.className = 'alba-suggestion-impact';
+    impacts.innerHTML = `
+      <div>${formatOriginal(originalImpact)}</div>
+      <div>${formatOptimized(optimizedImpact)}</div>
+    `;
 
     const actions = document.createElement('div');
     actions.className = 'alba-suggestion-actions';
@@ -415,6 +430,7 @@
 
     suggestion.appendChild(header);
     suggestion.appendChild(content);
+    suggestion.appendChild(impacts);
     suggestion.appendChild(actions);
 
     // Insert suggestion near the input
@@ -465,124 +481,10 @@
   function handleOptimizeClick(controller) {
     const original = getInputText(controller.input) || '';
     if (!original.trim()) return;
-    showOptimizerPanel(controller, original);
+    controller.lastOptimizedText = null;
+    fetchAndShowInlineSuggestion(controller);
   }
 
-  async function showOptimizerPanel(controller, originalText) {
-    const overlay = document.createElement('div');
-    overlay.className = 'alba-optimizer-panel';
-    applyTheme(overlay);
-
-    const header = document.createElement('div');
-    header.className = 'alba-panel-header';
-    header.textContent = 'Prompt impact preview';
-    const closeBtn = document.createElement('button');
-    closeBtn.type = 'button';
-    closeBtn.className = 'alba-panel-close';
-    closeBtn.textContent = 'x';
-    closeBtn.addEventListener('click', () => overlay.remove());
-    header.appendChild(closeBtn);
-
-    const body = document.createElement('div');
-    body.className = 'alba-panel-body';
-
-    const originalBlock = createPromptBlock('Original', originalText);
-    body.appendChild(originalBlock.element);
-
-    const optimizedText = applyLocalOptimizer(originalText);
-    const optimizedBlock = createPromptBlock('Optimized suggestion', optimizedText);
-    body.appendChild(optimizedBlock.element);
-
-    const stats = document.createElement('div');
-    stats.className = 'alba-panel-stats';
-
-    const originalModality = detectModality(originalText);
-    const originalImpact = estimateImpact({
-      text: originalText,
-      modality: originalModality,
-      images: originalModality === 'image' ? 1 : 0
-    });
-    let candidateText = optimizedText;
-    let candidateModality = detectModality(optimizedText);
-    let candidateImpact = estimateImpact({
-      text: optimizedText,
-      modality: candidateModality,
-      images: candidateModality === 'image' ? 1 : 0
-    });
-
-    const updateStats = () => {
-      const delta = originalImpact.Wh > 0 ? ((originalImpact.Wh - candidateImpact.Wh) / originalImpact.Wh) : 0;
-      const deltaText = delta > 0 ? `-${(delta * 100).toFixed(0)}% energy` : 'No savings';
-      stats.textContent = `${formatImpactLine(originalImpact)} -> ${formatImpactLine(candidateImpact)} (${deltaText})`;
-    };
-    updateStats();
-
-    const actions = document.createElement('div');
-    actions.className = 'alba-panel-actions';
-    const useOriginal = document.createElement('button');
-    useOriginal.type = 'button';
-    useOriginal.textContent = 'Use original';
-    const useOptimized = document.createElement('button');
-    useOptimized.type = 'button';
-    useOptimized.className = 'alba-primary';
-    useOptimized.textContent = 'Use optimized';
-
-    useOriginal.addEventListener('click', () => {
-      setInputText(controller.input, originalText);
-      controller.input.dispatchEvent(new Event('input', { bubbles: true }));
-      overlay.remove();
-    });
-
-    useOptimized.addEventListener('click', () => {
-      setInputText(controller.input, candidateText);
-      controller.input.dispatchEvent(new Event('input', { bubbles: true }));
-      overlay.remove();
-    });
-
-    actions.appendChild(useOriginal);
-    actions.appendChild(useOptimized);
-
-    overlay.appendChild(header);
-    overlay.appendChild(body);
-    overlay.appendChild(stats);
-    overlay.appendChild(actions);
-
-    document.body.appendChild(overlay);
-
-    if (state.settings.remoteOptimizer) {
-      optimizedBlock.element.classList.add('alba-loading');
-      fetchRemoteOptimization(originalText)
-        .then((remoteText) => {
-          if (remoteText && remoteText.trim().length >= ALBA_CONFIG.minChars) {
-            candidateText = remoteText.trim();
-            candidateModality = detectModality(candidateText);
-            candidateImpact =
-              estimateImpact({
-                text: candidateText,
-                modality: candidateModality,
-                images: candidateModality === 'image' ? 1 : 0
-              }) || candidateImpact;
-            optimizedBlock.contentEl.textContent = candidateText;
-            updateStats();
-          }
-        })
-        .finally(() => optimizedBlock.element.classList.remove('alba-loading'));
-    }
-  }
-
-  function createPromptBlock(label, text) {
-    const wrap = document.createElement('div');
-    wrap.className = 'alba-prompt-block';
-    const heading = document.createElement('div');
-    heading.className = 'alba-block-label';
-    heading.textContent = label;
-    const content = document.createElement('div');
-    content.className = 'alba-block-content';
-    content.textContent = text.trim();
-    wrap.appendChild(heading);
-    wrap.appendChild(content);
-    return { element: wrap, contentEl: content };
-  }
 
   function applyLocalOptimizer(text) {
     const trimmed = text
@@ -698,7 +600,13 @@
     const toggle = document.createElement('button');
     toggle.className = 'alba-widget-toggle';
     toggle.type = 'button';
-    toggle.textContent = 'alba';
+
+    const logo = document.createElement('img');
+    logo.src = chrome.runtime.getURL('icons/alba_logo.png');
+    logo.alt = 'Company logo';
+    logo.className = 'alba-widget-logo';
+
+    toggle.appendChild(logo);
 
     const card = document.createElement('div');
     card.className = 'alba-widget-card';
@@ -754,7 +662,7 @@
     const previous = state.dailyTotals[getPreviousDayKey(key)] || { Wh: 0, gCO2: 0, waterMl: 0 };
     const tooltipCopy = formatTotalsTooltip(totals);
     state.widget.totalsEl.innerHTML =
-      `<strong>Today</strong>
+      `<strong>Today's Totals</strong>
        <div class="alba-widget-totals-line alba-tooltip-host">
          ${totals.Wh.toFixed(2)} Wh | ${totals.gCO2.toFixed(2)} g CO2 | ${totals.waterMl.toFixed(0)} mL
          <div class="alba-tooltip">${tooltipCopy}</div>
@@ -901,15 +809,26 @@
 
   function formatImpactLine(estimate) {
     if (!estimate) return 'alba | Impact unknown';
-    return `alba | est. ${estimate.Wh.toFixed(2)} Wh | ${estimate.gCO2.toFixed(2)} g CO2 | ${estimate.waterMl.toFixed(0)} mL`;
+    return `Estimated Impact: ⚡${estimate.Wh.toFixed(3)} Wh | 🌎 ${estimate.gCO2.toFixed(3)} g CO2 | 💧 ${estimate.waterMl.toFixed(3)} mL H2O`;
   }
 
+  function formatOriginal(estimate) {
+    if (!estimate) return 'alba | Impact unknown';
+    return `Original Impact: ⚡${estimate.Wh.toFixed(3)} Wh | 🌎 ${estimate.gCO2.toFixed(3)} g CO2 | 💧 ${estimate.waterMl.toFixed(3)} mL H2O`;
+  }
+
+  function formatOptimized(estimate) {
+    if (!estimate) return 'alba | Impact unknown';
+    return `Optimized Impact: ⚡${estimate.Wh.toFixed(3)} Wh | 🌎 ${estimate.gCO2.toFixed(3)} g CO2 | 💧 ${estimate.waterMl.toFixed(3)} mL H2O`;
+  }
+  
+
   function formatComparison(Wh) {
-    if (!Wh || Wh <= 0) return 'Comparable impact unavailable';
-    const baseline = ALBA_CONFIG.baselineComparisons[0];
-    const value = baseline && baseline.factorWh ? Wh / baseline.factorWh : 0;
-    if (!value) return 'Comparable impact unavailable';
-    return `${value.toFixed(1)} ${baseline.label}`;
+  if (!Wh || Wh <= 0) return 'No impact recorded yet today.';
+  const baseline = ALBA_CONFIG.baselineComparisons && ALBA_CONFIG.baselineComparisons[0];
+  if (!baseline || !baseline.factorWh) return 'Comparable impact unavailable.';
+  const value = (Wh / baseline.factorWh).toFixed(1);
+  return `${baseline.label} for ${value} minutes`;
   }
 
   function formatTotalsTooltip(totals) {
@@ -1158,5 +1077,4 @@
       return null;
     }
   }
-}
 })();
