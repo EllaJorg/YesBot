@@ -146,6 +146,7 @@
       controller.input.removeEventListener('keyup', controller.listener);
       controller.input.removeEventListener('blur', controller.listener);
       controller.container.remove();
+      controller.root?.removeAttribute('data-alba-prompt-attached');
       delete controller.host.dataset.albaAttached;
     });
     state.promptControllers.clear();
@@ -225,19 +226,23 @@
       document.querySelectorAll(selector).forEach((input) => {
         const resolved = resolveEditableTarget(input);
         if (!resolved || resolved.dataset.albaAttached) return;
+        const hostRoot = getPromptRoot(resolved);
+        if (hostRoot?.dataset.albaPromptAttached) return;
         resolved.dataset.albaAttached = 'true';
-        createPromptController(resolved);
+        if (hostRoot) hostRoot.dataset.albaPromptAttached = 'true';
+        createPromptController(resolved, hostRoot);
       });
     });
   }
 
-  function createPromptController(editableTarget) {
+  function createPromptController(editableTarget, hostRoot) {
     const controller = {
       host: editableTarget,
       input: editableTarget,
       container: document.createElement('div'),
       optimizeButton: document.createElement('button'),
       previewText: document.createElement('span'),
+      root: hostRoot || editableTarget.closest('form') || editableTarget.parentElement,
       inlineSuggestion: null,
       lastEstimate: null,
       lastOptimizedText: null,
@@ -246,7 +251,7 @@
 
     controller.container.className = 'alba-optimizer-bar';
     applyTheme(controller.container);
-    controller.previewText.className = 'alba-optimizer-preview';
+    // controller.previewText.className = 'alba-optimizer-preview';
     //controller.previewText.textContent = 'alba | Impact unknown';
 
     controller.optimizeButton.className = 'alba-optimizer-action';
@@ -261,7 +266,7 @@
     controller.container.appendChild(controller.previewText);
     controller.container.appendChild(controller.optimizeButton);
 
-    const parent = editableTarget.closest('form') || editableTarget.parentElement;
+    const parent = controller.root || editableTarget.closest('form') || editableTarget.parentElement;
     (parent || editableTarget).appendChild(controller.container);
 
     const listener = () => {
@@ -284,6 +289,7 @@
         host.removeEventListener('keyup', controller.listener);
         host.removeEventListener('blur', controller.listener);
         controller.container.remove();
+        controller.root?.removeAttribute('data-alba-prompt-attached');
         delete host.dataset.albaAttached;
         state.promptControllers.delete(host);
       }
@@ -959,6 +965,16 @@
 
   function clamp(value, min, max) {
     return Math.min(max, Math.max(min, value));
+  }
+
+  function getPromptRoot(element) {
+    if (!element) return null;
+    return (
+      element.closest('form') ||
+      element.closest('[role="form"]') ||
+      element.closest('[data-testid="prompt-editor"],[data-testid="prompt-form"]') ||
+      element.parentElement
+    );
   }
 
   function resolveEditableTarget(element) {
