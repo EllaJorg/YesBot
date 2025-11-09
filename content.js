@@ -855,15 +855,22 @@
 
     ['pushState', 'replaceState'].forEach(patchHistoryMethod);
     window.addEventListener('popstate', handleChange);
-    setInterval(handleChange, 2000);
+    setInterval(handleChange, 1500);
+    setTimeout(handleChange, 0);
   }
 
   function getConversationId() {
+    const siteId = state.site?.id || window.location.hostname || 'site';
+    const domConversation =
+      document.querySelector('[data-conversation-id]')?.getAttribute('data-conversation-id') ||
+      document.querySelector('[data-thread-id]')?.getAttribute('data-thread-id');
+    if (domConversation) {
+      return `${siteId}:thread:${domConversation}`;
+    }
     const path = window.location.pathname || '/';
     const chatMatch = path.match(/\/c\/([^/]+)/);
     const identifier = chatMatch ? chatMatch[1] : path || 'root';
     const search = window.location.search || '';
-    const siteId = state.site?.id || window.location.hostname || 'site';
     return `${siteId}:${identifier}${search}`;
   }
 
