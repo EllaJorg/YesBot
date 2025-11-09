@@ -10,6 +10,7 @@ __pycache__/
 .Python
 build/
 node_modules/
+.DS_Store
 develop-eggs/
 dist/
 node_modules/

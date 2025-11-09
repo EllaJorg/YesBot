@@ -10,6 +10,7 @@
     optimizer: document.getElementById('alba-optimizer'),
     profile: document.getElementById('alba-profile'),
     region: document.getElementById('alba-region'),
+    theme: document.getElementById('alba-theme'),
     totals: document.getElementById('alba-today-totals'),
     comparison: document.getElementById('alba-comparison'),
     exportBtn: document.getElementById('alba-export'),
@@ -21,6 +22,7 @@
   function initPopup() {
     populateSelect(settingsEls.profile, ALBA_CONFIG.modelProfiles, 'label');
     populateSelect(settingsEls.region, ALBA_CONFIG.regions);
+    populateSelect(settingsEls.theme, ALBA_CONFIG.themes, 'label');
     loadState();
     bindEvents();
   }
@@ -43,6 +45,8 @@
         settingsEls.optimizer.checked = settings.optimizerEnabled;
         settingsEls.profile.value = settings.modelProfile;
         settingsEls.region.value = settings.region;
+        settingsEls.theme.value = getValidTheme(settings.theme);
+        applyPopupTheme(settingsEls.theme.value);
         renderTotals(data[ALBA_STORAGE_KEYS.totals] || {});
       }
     );
@@ -53,6 +57,10 @@
     settingsEls.optimizer.addEventListener('change', saveSettings);
     settingsEls.profile.addEventListener('change', saveSettings);
     settingsEls.region.addEventListener('change', saveSettings);
+    settingsEls.theme.addEventListener('change', () => {
+      applyPopupTheme(settingsEls.theme.value);
+      saveSettings();
+    });
     settingsEls.exportBtn.addEventListener('click', exportHistoryFromPopup);
     settingsEls.resetBtn.addEventListener('click', resetTodayFromPopup);
   }
@@ -63,9 +71,21 @@
       optimizerEnabled: settingsEls.optimizer.checked,
       modelProfile: settingsEls.profile.value,
       region: settingsEls.region.value,
+      theme: getValidTheme(settingsEls.theme.value),
       remoteOptimizer: true  // Enable remote optimizer for API calls
     };
     chrome.storage.sync.set({ [ALBA_STORAGE_KEYS.settings]: payload });
+  }
+
+  function getValidTheme(themeKey) {
+    if (ALBA_CONFIG.themes && ALBA_CONFIG.themes[themeKey]) {
+      return themeKey;
+    }
+    return 'light';
+  }
+
+  function applyPopupTheme(themeKey) {
+    document.body.dataset.albaTheme = getValidTheme(themeKey);
   }
 
   function renderTotals(totalsMap) {
@@ -83,8 +103,8 @@
     if (!Wh || Wh <= 0) return 'No impact recorded yet today.';
     const baseline = ALBA_CONFIG.baselineComparisons && ALBA_CONFIG.baselineComparisons[0];
     if (!baseline || !baseline.factorWh) return 'Comparable impact unavailable.';
-    const value = Wh / baseline.factorWh;
-    return `${value.toFixed(1)} ${baseline.label}`;
+    const value = (Wh / baseline.factorWh).toFixed(1);
+    return `${baseline.label} for ${value} minutes`;
   }
 
   function formatTotalsTooltip(totals) {

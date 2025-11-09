@@ -95,6 +95,14 @@
     lyrics: [0, 0, 1]
   };
 
+  const REMOTE_API_BASE = 'http://localhost:3000';
+  const WRAPPED_GRADIENTS = [
+    'linear-gradient(135deg, #f97794 0%, #623aa2 100%)',
+    'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+    'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+    'linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)'
+  ];
+
   const state = {
     settings: { ...ALBA_CONFIG.defaultSettings },
     dailyTotals: {},
@@ -105,7 +113,12 @@
     assistantObserver: null,
     site: SITE_CONFIGS.find((config) => config.hostPattern.test(window.location.hostname)),
     debounceTimers: new WeakMap(),
-    featuresActive: false
+    featuresActive: false,
+    conversationId: null,
+    locationTrackerInitialized: false,
+    wrappedPanel: null,
+    wrappedAbortController: null,
+    wrappedEscHandler: null
   };
 
   if (!state.site) {
@@ -115,6 +128,8 @@
   init();
 
   function init() {
+    state.conversationId = getConversationId();
+    startConversationTracking();
     loadPersistedState().then(() => {
       chrome.storage.onChanged.addListener(handleStorageChange);
       if (state.settings.enabled) {
@@ -154,7 +169,7 @@
       state.widget.root.remove();
     }
     state.widget = null;
-    document.querySelectorAll('.alba-impact-label, .alba-optimizer-panel, .alba-inline-suggestion').forEach((node) => node.remove());
+    document.querySelectorAll('.alba-impact-label, .alba-inline-suggestion').forEach((node) => node.remove());
   }
 
   function loadPersistedState() {
@@ -171,6 +186,7 @@
           }
           state.dailyTotals = data[ALBA_STORAGE_KEYS.totals] || {};
           state.history = data[ALBA_STORAGE_KEYS.history] || [];
+          refreshThemeTokens();
           resolve();
         }
       );
@@ -187,6 +203,7 @@
     if (area !== 'sync') return;
     if (changes[ALBA_STORAGE_KEYS.settings]) {
       const prevEnabled = state.settings.enabled;
+      const prevTheme = state.settings.theme;
       state.settings = {
         ...ALBA_CONFIG.defaultSettings,
         ...changes[ALBA_STORAGE_KEYS.settings].newValue
@@ -194,6 +211,9 @@
       state.promptControllers.forEach((controller) => {
         controller.optimizeButton.disabled = !state.settings.optimizerEnabled;
       });
+      if (state.settings.theme !== prevTheme) {
+        refreshThemeTokens();
+      }
       if (!state.settings.enabled && prevEnabled) {
         teardownFeatures();
       } else if (state.settings.enabled && !prevEnabled) {
@@ -247,7 +267,7 @@
     controller.container.className = 'alba-optimizer-bar';
     applyTheme(controller.container);
     controller.previewText.className = 'alba-optimizer-preview';
-    //controller.previewText.textContent = 'alba | Impact unknown';
+    //controller.previewText.textContent = 'Alba';
 
     controller.optimizeButton.className = 'alba-optimizer-action';
     controller.optimizeButton.type = 'button';
@@ -367,9 +387,11 @@
       images: 0
     });
 
-    const savings = originalImpact && optimizedImpact
-      ? ((originalImpact.Wh - optimizedImpact.Wh) / originalImpact.Wh * 100).toFixed(0)
-      : 0;
+    const gramsSavings = originalImpact && optimizedImpact ? (originalImpact.gCO2 - optimizedImpact.gCO2) : 0;
+    const percentSavings =
+      originalImpact && optimizedImpact && originalImpact.Wh > 0
+        ? ((originalImpact.Wh - optimizedImpact.Wh) / originalImpact.Wh) * 100
+        : 0;
 
     // Remove existing suggestion if any
     hideInlineSuggestion(controller);
@@ -382,13 +404,26 @@
     const header = document.createElement('div');
     header.className = 'alba-suggestion-header';
     header.innerHTML = `
-      <span class="alba-suggestion-badge">${source === 'remote' ? 'AI Optimized' : 'Quick Optimization'}</span>
-      <span class="alba-suggestion-savings">${savings > 0 ? `Save ${savings}% energy` : 'Optimized'}</span>
+      <span class="alba-suggestion-badge">${source === 'remote' ? 'Optimized' : 'Quick Optimization'}</span>
+      <span class="alba-suggestion-savings">
+        ${
+          percentSavings > 0
+            ? `Reduced Footprint ${percentSavings.toFixed(0)}%`
+            : 'Optimized'
+        }
+      </span>
     `;
 
     const content = document.createElement('div');
     content.className = 'alba-suggestion-content';
     content.textContent = optimizedText;
+
+    const impacts = document.createElement('div');
+    impacts.className = 'alba-suggestion-impact';
+    impacts.innerHTML = `
+      <div>${formatOriginal(originalImpact)}</div>
+      <div>${formatOptimized(optimizedImpact)}</div>
+    `;
 
     const actions = document.createElement('div');
     actions.className = 'alba-suggestion-actions';
@@ -415,6 +450,7 @@
 
     suggestion.appendChild(header);
     suggestion.appendChild(content);
+    suggestion.appendChild(impacts);
     suggestion.appendChild(actions);
 
     // Insert suggestion near the input
@@ -435,7 +471,7 @@
   function updatePromptEstimate(controller) {
     const text = (getInputText(controller.input) || '').trim();
     if (!text) {
-      controller.previewText.textContent = 'alba | Impact unknown';
+      controller.previewText.textContent = 'Alba';
       controller.lastEstimate = null;
       return;
     }
@@ -454,7 +490,7 @@
     const estimate = estimateImpact(estimateConfig);
     if (!estimate) {
       controller.lastEstimate = null;
-      controller.previewText.textContent = 'alba | Impact unknown';
+      controller.previewText.textContent = 'Alba';
     } else {
       controller.lastEstimate = estimate;
       controller.previewText.textContent = formatImpactLine(estimate);
@@ -465,124 +501,10 @@
   function handleOptimizeClick(controller) {
     const original = getInputText(controller.input) || '';
     if (!original.trim()) return;
-    showOptimizerPanel(controller, original);
+    controller.lastOptimizedText = null;
+    fetchAndShowInlineSuggestion(controller);
   }
 
-  async function showOptimizerPanel(controller, originalText) {
-    const overlay = document.createElement('div');
-    overlay.className = 'alba-optimizer-panel';
-    applyTheme(overlay);
-
-    const header = document.createElement('div');
-    header.className = 'alba-panel-header';
-    header.textContent = 'Prompt impact preview';
-    const closeBtn = document.createElement('button');
-    closeBtn.type = 'button';
-    closeBtn.className = 'alba-panel-close';
-    closeBtn.textContent = 'x';
-    closeBtn.addEventListener('click', () => overlay.remove());
-    header.appendChild(closeBtn);
-
-    const body = document.createElement('div');
-    body.className = 'alba-panel-body';
-
-    const originalBlock = createPromptBlock('Original', originalText);
-    body.appendChild(originalBlock.element);
-
-    const optimizedText = applyLocalOptimizer(originalText);
-    const optimizedBlock = createPromptBlock('Optimized suggestion', optimizedText);
-    body.appendChild(optimizedBlock.element);
-
-    const stats = document.createElement('div');
-    stats.className = 'alba-panel-stats';
-
-    const originalModality = detectModality(originalText);
-    const originalImpact = estimateImpact({
-      text: originalText,
-      modality: originalModality,
-      images: originalModality === 'image' ? 1 : 0
-    });
-    let candidateText = optimizedText;
-    let candidateModality = detectModality(optimizedText);
-    let candidateImpact = estimateImpact({
-      text: optimizedText,
-      modality: candidateModality,
-      images: candidateModality === 'image' ? 1 : 0
-    });
-
-    const updateStats = () => {
-      const delta = originalImpact.Wh > 0 ? ((originalImpact.Wh - candidateImpact.Wh) / originalImpact.Wh) : 0;
-      const deltaText = delta > 0 ? `-${(delta * 100).toFixed(0)}% energy` : 'No savings';
-      stats.textContent = `${formatImpactLine(originalImpact)} -> ${formatImpactLine(candidateImpact)} (${deltaText})`;
-    };
-    updateStats();
-
-    const actions = document.createElement('div');
-    actions.className = 'alba-panel-actions';
-    const useOriginal = document.createElement('button');
-    useOriginal.type = 'button';
-    useOriginal.textContent = 'Use original';
-    const useOptimized = document.createElement('button');
-    useOptimized.type = 'button';
-    useOptimized.className = 'alba-primary';
-    useOptimized.textContent = 'Use optimized';
-
-    useOriginal.addEventListener('click', () => {
-      setInputText(controller.input, originalText);
-      controller.input.dispatchEvent(new Event('input', { bubbles: true }));
-      overlay.remove();
-    });
-
-    useOptimized.addEventListener('click', () => {
-      setInputText(controller.input, candidateText);
-      controller.input.dispatchEvent(new Event('input', { bubbles: true }));
-      overlay.remove();
-    });
-
-    actions.appendChild(useOriginal);
-    actions.appendChild(useOptimized);
-
-    overlay.appendChild(header);
-    overlay.appendChild(body);
-    overlay.appendChild(stats);
-    overlay.appendChild(actions);
-
-    document.body.appendChild(overlay);
-
-    if (state.settings.remoteOptimizer) {
-      optimizedBlock.element.classList.add('alba-loading');
-      fetchRemoteOptimization(originalText)
-        .then((remoteText) => {
-          if (remoteText && remoteText.trim().length >= ALBA_CONFIG.minChars) {
-            candidateText = remoteText.trim();
-            candidateModality = detectModality(candidateText);
-            candidateImpact =
-              estimateImpact({
-                text: candidateText,
-                modality: candidateModality,
-                images: candidateModality === 'image' ? 1 : 0
-              }) || candidateImpact;
-            optimizedBlock.contentEl.textContent = candidateText;
-            updateStats();
-          }
-        })
-        .finally(() => optimizedBlock.element.classList.remove('alba-loading'));
-    }
-  }
-
-  function createPromptBlock(label, text) {
-    const wrap = document.createElement('div');
-    wrap.className = 'alba-prompt-block';
-    const heading = document.createElement('div');
-    heading.className = 'alba-block-label';
-    heading.textContent = label;
-    const content = document.createElement('div');
-    content.className = 'alba-block-content';
-    content.textContent = text.trim();
-    wrap.appendChild(heading);
-    wrap.appendChild(content);
-    return { element: wrap, contentEl: content };
-  }
 
   function applyLocalOptimizer(text) {
     const trimmed = text
@@ -674,6 +596,7 @@
       site: state.site.id,
       source,
       modality,
+      conversationId: state.conversationId,
       chars: text.length,
       tokens: estimate.tokens,
       Wh: estimate.Wh,
@@ -698,10 +621,34 @@
     const toggle = document.createElement('button');
     toggle.className = 'alba-widget-toggle';
     toggle.type = 'button';
-    toggle.textContent = 'alba';
+
+    const logo = document.createElement('img');
+    logo.src = chrome.runtime.getURL('icons/alba_logo.png');
+    logo.alt = 'Company logo';
+    logo.className = 'alba-widget-logo';
+
+    toggle.appendChild(logo);
 
     const card = document.createElement('div');
     card.className = 'alba-widget-card';
+
+    const tabs = document.createElement('div');
+    tabs.className = 'alba-widget-tabs';
+
+    const todayTab = document.createElement('button');
+    todayTab.type = 'button';
+    todayTab.className = 'alba-widget-tab';
+    todayTab.dataset.tab = 'today';
+    todayTab.textContent = "Today's Impact";
+
+    const chatTab = document.createElement('button');
+    chatTab.type = 'button';
+    chatTab.className = 'alba-widget-tab';
+    chatTab.dataset.tab = 'chat';
+    chatTab.textContent = 'This Chat';
+
+    tabs.appendChild(todayTab);
+    tabs.appendChild(chatTab);
 
     const totals = document.createElement('div');
     totals.className = 'alba-widget-totals';
@@ -728,6 +675,7 @@
     buttons.appendChild(exportBtn);
     buttons.appendChild(resetBtn);
 
+    card.appendChild(tabs);
     card.appendChild(totals);
     card.appendChild(comparison);
     card.appendChild(delta);
@@ -741,7 +689,35 @@
     });
 
     document.body.appendChild(widget);
-    state.widget = { root: widget, totalsEl: totals, comparisonEl: comparison, deltaEl: delta };
+    const previousTab = state.widget?.activeTab || 'today';
+    state.widget = {
+      root: widget,
+      totalsEl: totals,
+      comparisonEl: comparison,
+      deltaEl: delta,
+      tabs: { container: tabs, today: todayTab, chat: chatTab },
+      activeTab: previousTab
+    };
+
+    todayTab.addEventListener('click', () => setWidgetTab('today'));
+    chatTab.addEventListener('click', () => setWidgetTab('chat'));
+
+    setWidgetTab(previousTab);
+  }
+
+  function setWidgetTab(tab) {
+    if (!state.widget) return;
+    const nextTab = tab === 'chat' ? 'chat' : 'today';
+    state.widget.activeTab = nextTab;
+    const tabs = state.widget.tabs || {};
+    const todayBtn = tabs.today;
+    const chatBtn = tabs.chat;
+    if (todayBtn) {
+      todayBtn.classList.toggle('alba-active', nextTab === 'today');
+    }
+    if (chatBtn) {
+      chatBtn.classList.toggle('alba-active', nextTab === 'chat');
+    }
     renderWidgetTotals();
   }
 
@@ -749,24 +725,296 @@
     if (!state.widget) return;
     const key = getTodayKey();
     ensureDailyTotalsKey(key);
-    console.log(state);
-    const totals = state.dailyTotals[key];
-    const previous = state.dailyTotals[getPreviousDayKey(key)] || { Wh: 0, gCO2: 0, waterMl: 0 };
-    const tooltipCopy = formatTotalsTooltip(totals);
+    const todayTotals = state.dailyTotals[key];
+    const activeTab = state.widget.activeTab || 'today';
+    const chatStats = getChatStats();
+    const displayTotals = activeTab === 'chat' ? chatStats.totals : todayTotals;
+    const heading = activeTab === 'chat' ? 'This Chat' : "Today's Totals";
+    const tooltipCopy = formatTotalsTooltip(displayTotals);
+    const summaryToggle =
+      activeTab === 'today'
+        ? '<button type="button" class="alba-widget-summary-link" aria-label="Open Spotify-style summary">Summary</button>'
+        : '';
     state.widget.totalsEl.innerHTML =
-      `<strong>Today</strong>
+      `<div class="alba-widget-heading">
+         <strong>${heading}</strong>
+         ${summaryToggle}
+       </div>
        <div class="alba-widget-totals-line alba-tooltip-host">
-         ${totals.Wh.toFixed(2)} Wh | ${totals.gCO2.toFixed(2)} g CO2 | ${totals.waterMl.toFixed(0)} mL
+         ${displayTotals.Wh.toFixed(2)} Wh | ${displayTotals.gCO2.toFixed(2)} g CO2 | ${displayTotals.waterMl.toFixed(0)} mL
          <div class="alba-tooltip">${tooltipCopy}</div>
        </div>`;
-    state.widget.comparisonEl.textContent = formatComparison(totals.Wh);
-    const deltaWh = totals.Wh - previous.Wh;
-    const arrow = deltaWh >= 0 ? '+' : '-';
-    const deltaText = `${arrow}${Math.abs(deltaWh).toFixed(2)} Wh vs yesterday`;
-    state.widget.deltaEl.textContent = deltaText;
+    if (activeTab === 'today') {
+      const summaryBtn = state.widget.totalsEl.querySelector('.alba-widget-summary-link');
+      if (summaryBtn) {
+        summaryBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          showWrappedSummary();
+        });
+      }
+    }
+    if (activeTab === 'today') {
+      const previous = state.dailyTotals[getPreviousDayKey(key)] || { Wh: 0, gCO2: 0, waterMl: 0 };
+      state.widget.comparisonEl.textContent = formatComparison(todayTotals.Wh);
+      const deltaWh = todayTotals.Wh - previous.Wh;
+      const arrow = deltaWh >= 0 ? '+' : '-';
+      const deltaText = `${arrow}${Math.abs(deltaWh).toFixed(2)} Wh vs yesterday`;
+      state.widget.deltaEl.textContent = deltaText;
+    } else {
+      if (chatStats.entries > 0) {
+        state.widget.comparisonEl.textContent = `${chatStats.entries} tracked message${chatStats.entries === 1 ? '' : 's'} in this chat`;
+        state.widget.deltaEl.textContent = 'Totals reset when you switch chats.';
+      } else {
+        state.widget.comparisonEl.textContent = 'No impact recorded in this chat yet.';
+        state.widget.deltaEl.textContent = '';
+      }
+    }
     const budgetWh = 10; // Adjustable daily reference for ring progress.
-    const progress = Math.min(1, totals.Wh / budgetWh);
+    const progress = Math.min(1, (displayTotals.Wh || 0) / budgetWh);
     state.widget.root.style.setProperty('--alba-progress', progress.toString());
+  }
+
+  function showWrappedSummary() {
+    const panel = ensureWrappedPanel();
+    applyTheme(panel.overlay);
+    panel.overlay.classList.add('alba-wrapped-visible');
+    const key = getTodayKey();
+    ensureDailyTotalsKey(key);
+    const todayTotals = state.dailyTotals[key] || { Wh: 0, gCO2: 0, waterMl: 0 };
+    const totals = {
+      Wh: Number(todayTotals.Wh || 0),
+      gCO2: Number(todayTotals.gCO2 || 0),
+      waterMl: Number(todayTotals.waterMl || 0)
+    };
+    const dateLabel = formatWrappedDate();
+    renderWrappedLoading(totals, dateLabel);
+
+    if (!state.wrappedEscHandler) {
+      state.wrappedEscHandler = (event) => {
+        if (event.key === 'Escape') {
+          hideWrappedSummary();
+        }
+      };
+    }
+    document.removeEventListener('keydown', state.wrappedEscHandler);
+    document.addEventListener('keydown', state.wrappedEscHandler);
+
+    state.wrappedAbortController?.abort();
+    const controller = new AbortController();
+    state.wrappedAbortController = controller;
+
+    if (!totals.Wh && !totals.gCO2 && !totals.waterMl) {
+      state.wrappedAbortController = null;
+      renderWrappedError('No impact recorded yet. Jam with an AI model to unlock your eco wrapped!', totals, dateLabel);
+      return;
+    }
+
+    fetchWrappedSummary(totals, dateLabel, controller.signal)
+      .then((payload) => {
+        if (controller.signal.aborted) return;
+        if (payload && Array.isArray(payload.cards)) {
+          renderWrappedPayload(payload, totals, dateLabel);
+        } else if (payload) {
+          renderWrappedPayload(payload, totals, dateLabel);
+        } else {
+          renderWrappedError('The storyteller came back empty. Try again in a moment.', totals, dateLabel);
+        }
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        console.warn('wrapped summary unavailable', err);
+        renderWrappedError(
+          `Could not reach ${REMOTE_API_BASE}/wrapped. Start the Alba API helper (npm start) and try again.`,
+          totals,
+          dateLabel
+        );
+      })
+      .finally(() => {
+        if (state.wrappedAbortController === controller) {
+          state.wrappedAbortController = null;
+        }
+      });
+  }
+
+  function hideWrappedSummary() {
+    state.wrappedAbortController?.abort();
+    state.wrappedAbortController = null;
+    if (state.wrappedPanel?.overlay) {
+      state.wrappedPanel.overlay.classList.remove('alba-wrapped-visible');
+    }
+    if (state.wrappedEscHandler) {
+      document.removeEventListener('keydown', state.wrappedEscHandler);
+    }
+  }
+
+  function ensureWrappedPanel() {
+    if (state.wrappedPanel) {
+      return state.wrappedPanel;
+    }
+    const overlay = document.createElement('div');
+    overlay.className = 'alba-wrapped-overlay alba-theme';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+
+    const shell = document.createElement('div');
+    shell.className = 'alba-wrapped-shell';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'alba-wrapped-close';
+    closeBtn.setAttribute('aria-label', 'Close Spotify-style summary');
+    closeBtn.textContent = '×';
+
+    const content = document.createElement('div');
+    content.className = 'alba-wrapped-body';
+
+    shell.appendChild(closeBtn);
+    shell.appendChild(content);
+    overlay.appendChild(shell);
+    document.body.appendChild(overlay);
+
+    closeBtn.addEventListener('click', hideWrappedSummary);
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) {
+        hideWrappedSummary();
+      }
+    });
+
+    state.wrappedPanel = { overlay, shell, content };
+    return state.wrappedPanel;
+  }
+
+  function renderWrappedLoading(totals, dateLabel) {
+    const panel = ensureWrappedPanel();
+    panel.content.innerHTML = `
+      <header class="alba-wrapped-head">
+        <p class="alba-wrapped-title">Alba Eco Wrapped</p>
+        <p class="alba-wrapped-subhead">${dateLabel}</p>
+        <p class="alba-wrapped-tagline">${formatWrappedMetrics(totals)}</p>
+      </header>
+      <div class="alba-wrapped-loading">
+        <div class="alba-wrapped-spinner"></div>
+        <p>Spinning up your eco analogies...</p>
+      </div>`;
+  }
+
+  function renderWrappedError(message, totals, dateLabel) {
+    const panel = ensureWrappedPanel();
+    panel.content.innerHTML = `
+      <header class="alba-wrapped-head">
+        <p class="alba-wrapped-title">Alba Eco Wrapped</p>
+        <p class="alba-wrapped-subhead">${dateLabel}</p>
+        <p class="alba-wrapped-tagline">${formatWrappedMetrics(totals)}</p>
+      </header>
+      <div class="alba-wrapped-error">
+        <p>${message}</p>
+        <button type="button" class="alba-wrapped-retry">Retry</button>
+      </div>`;
+    const retryBtn = panel.content.querySelector('.alba-wrapped-retry');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        showWrappedSummary();
+      });
+    }
+  }
+
+  function renderWrappedPayload(payload, totals, dateLabel) {
+    const panel = ensureWrappedPanel();
+    const sourceCards =
+      Array.isArray(payload.cards) && payload.cards.length ? payload.cards : buildLocalWrappedCards(totals);
+    const cards = sourceCards.slice(0, 3).map((card, idx) => {
+      return `
+        <article class="alba-wrapped-card" style="--alba-wrapped-gradient:${getWrappedGradient(idx)}">
+          <p class="alba-wrapped-card-title">${card.title || 'Highlight'}</p>
+          <p class="alba-wrapped-card-stat">
+            <span class="alba-wrapped-card-value">${card.statValue || ''}</span>
+            <span class="alba-wrapped-card-label">${card.statLabel || ''}</span>
+          </p>
+          <p class="alba-wrapped-card-analogy">${card.analogy || ''}</p>
+          <p class="alba-wrapped-card-tip">${card.tip || ''}</p>
+        </article>`;
+    }).join('');
+
+    panel.content.innerHTML = `
+      <header class="alba-wrapped-head">
+        <p class="alba-wrapped-title">${payload.headline || 'Alba Eco Wrapped'}</p>
+        <p class="alba-wrapped-subhead">${payload.subhead || dateLabel}</p>
+        <p class="alba-wrapped-tagline">${formatWrappedMetrics(totals)}</p>
+      </header>
+      <section class="alba-wrapped-grid">
+        ${cards}
+      </section>
+      <footer class="alba-wrapped-footer">
+        <p>${payload.cta || ''}</p>
+        <span>${payload.footnote || 'Estimates rely on Alba defaults only.'}</span>
+      </footer>`;
+  }
+
+  function getWrappedGradient(index) {
+    return WRAPPED_GRADIENTS[index % WRAPPED_GRADIENTS.length];
+  }
+
+  function formatWrappedDate(date = new Date()) {
+    return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+
+  function formatWrappedMetrics(totals) {
+    return `${totals.Wh.toFixed(2)} Wh • ${totals.gCO2.toFixed(2)} g CO₂ • ${totals.waterMl.toFixed(0)} mL`;
+  }
+
+  function estimateSavingsFromUsage(totals = {}) {
+    const profileSavings = { small: 0.35, balanced: 0.25, large: 0.15 };
+    const profileKey = state.settings?.modelProfile || 'balanced';
+    const baseRate = profileSavings[profileKey] ?? 0.2;
+    const optimizerBonus = state.settings?.optimizerEnabled ? 0.1 : 0;
+    const remoteBonus = state.settings?.remoteOptimizer ? 0.05 : 0;
+    const rate = Math.min(0.9, baseRate + optimizerBonus + remoteBonus);
+    return {
+      Wh: (totals.Wh || 0) * rate,
+      gCO2: (totals.gCO2 || 0) * rate,
+      waterMl: (totals.waterMl || 0) * rate,
+      rate
+    };
+  }
+
+  function buildLocalWrappedCards(totals) {
+    const savings = estimateSavingsFromUsage(totals);
+    const ledMinutesSaved = savings.Wh ? (savings.Wh / 0.008).toFixed(1) : '0';
+    const phoneChargesSaved = savings.Wh ? (savings.Wh / 11).toFixed(1) : '0';
+    const scooterKmSaved = savings.gCO2 ? (savings.gCO2 / 12).toFixed(1) : '0';
+    const waterPercSaved = savings.waterMl ? ((savings.waterMl / 9500) * 100).toFixed(1) : '0';
+    const bottleRefills = savings.waterMl ? (savings.waterMl / 500).toFixed(1) : '0';
+    return [
+      {
+        title: 'Energy Giveback',
+        statLabel: 'Wh saved',
+        statValue: `${savings.Wh.toFixed(2)} Wh`,
+        analogy: savings.Wh
+          ? `You kept roughly ${ledMinutesSaved} minutes of LED glow off — about ${phoneChargesSaved} phone charges avoided.`
+          : 'Once optimizations kick in, your saved watts will show up here.',
+        tip: 'Bundle related prompts so you reuse model context instead of starting from scratch.'
+      },
+      {
+        title: 'Carbon Cut',
+        statLabel: 'CO₂ saved',
+        statValue: `${savings.gCO2.toFixed(2)} g`,
+        analogy: savings.gCO2
+          ? `Dodged the CO₂ from a ${scooterKmSaved} km e-scooter ride by keeping conversations lean.`
+          : 'Ask something new and reuse context to unlock your carbon cuts.',
+        tip: 'Accept optimizer suggestions or trim inputs before sending long drafts.'
+      },
+      {
+        title: 'Water Steward',
+        statLabel: 'Water saved',
+        statValue: `${savings.waterMl.toFixed(0)} mL`,
+        analogy: savings.waterMl
+          ? `Protected about ${waterPercSaved}% of a short shower — roughly ${bottleRefills} reusable bottles of water.`
+          : 'Keep refining prompts to see the ripple effect of water savings.',
+        tip: 'Stay text-first and limit regenerations when visuals aren’t required.'
+      }
+    ];
   }
 
   function exportHistory() {
@@ -815,6 +1063,25 @@
     renderWidgetTotals();
   }
 
+  function getChatStats() {
+    const totals = { Wh: 0, gCO2: 0, waterMl: 0 };
+    const conversationId = state.conversationId || getConversationId();
+    if (!conversationId) {
+      return { totals, entries: 0 };
+    }
+    const todayKey = getTodayKey();
+    let entries = 0;
+    state.history.forEach((entry) => {
+      if (entry.conversationId !== conversationId) return;
+      if (getDateKey(entry.timestamp) !== todayKey) return;
+      entries += 1;
+      totals.Wh += entry.Wh || 0;
+      totals.gCO2 += entry.gCO2 || 0;
+      totals.waterMl += entry.waterMl || 0;
+    });
+    return { totals, entries };
+  }
+
   function getInputText(input) {
     if (!input) return '';
     if (typeof input.value === 'string') {
@@ -838,6 +1105,50 @@
     } else {
       input.textContent = text;
     }
+  }
+
+  function startConversationTracking() {
+    if (state.locationTrackerInitialized) return;
+    state.locationTrackerInitialized = true;
+
+    const handleChange = () => {
+      const nextId = getConversationId();
+      if (!nextId || nextId === state.conversationId) return;
+      state.conversationId = nextId;
+      renderWidgetTotals();
+    };
+
+    const patchHistoryMethod = (method) => {
+      const original = history[method];
+      if (typeof original !== 'function' || original.__albaWrapped) return;
+      const wrapped = function (...args) {
+        const result = original.apply(this, args);
+        setTimeout(handleChange, 0);
+        return result;
+      };
+      wrapped.__albaWrapped = true;
+      history[method] = wrapped;
+    };
+
+    ['pushState', 'replaceState'].forEach(patchHistoryMethod);
+    window.addEventListener('popstate', handleChange);
+    setInterval(handleChange, 1500);
+    setTimeout(handleChange, 0);
+  }
+
+  function getConversationId() {
+    const siteId = state.site?.id || window.location.hostname || 'site';
+    const domConversation =
+      document.querySelector('[data-conversation-id]')?.getAttribute('data-conversation-id') ||
+      document.querySelector('[data-thread-id]')?.getAttribute('data-thread-id');
+    if (domConversation) {
+      return `${siteId}:thread:${domConversation}`;
+    }
+    const path = window.location.pathname || '/';
+    const chatMatch = path.match(/\/c\/([^/]+)/);
+    const identifier = chatMatch ? chatMatch[1] : path || 'root';
+    const search = window.location.search || '';
+    return `${siteId}:${identifier}${search}`;
   }
 
   function detectModality(text) {
@@ -900,16 +1211,27 @@
   }
 
   function formatImpactLine(estimate) {
-    if (!estimate) return 'alba | Impact unknown';
-    return `alba | est. ${estimate.Wh.toFixed(2)} Wh | ${estimate.gCO2.toFixed(2)} g CO2 | ${estimate.waterMl.toFixed(0)} mL`;
+    if (!estimate) return 'Alba';
+    return `Estimated Impact: ⚡${estimate.Wh.toFixed(3)} Wh | 🌎 ${estimate.gCO2.toFixed(3)} g CO2 | 💧 ${estimate.waterMl.toFixed(3)} mL H2O`;
   }
 
+  function formatOriginal(estimate) {
+    if (!estimate) return 'Alba';
+    return `Original Impact: ⚡${estimate.Wh.toFixed(3)} Wh | 🌎 ${estimate.gCO2.toFixed(3)} g CO2 | 💧 ${estimate.waterMl.toFixed(3)} mL H2O`;
+  }
+
+  function formatOptimized(estimate) {
+    if (!estimate) return 'Alba';
+    return `Optimized Impact: ⚡${estimate.Wh.toFixed(3)} Wh | 🌎 ${estimate.gCO2.toFixed(3)} g CO2 | 💧 ${estimate.waterMl.toFixed(3)} mL H2O`;
+  }
+  
+
   function formatComparison(Wh) {
-    if (!Wh || Wh <= 0) return 'Comparable impact unavailable';
-    const baseline = ALBA_CONFIG.baselineComparisons[0];
-    const value = baseline && baseline.factorWh ? Wh / baseline.factorWh : 0;
-    if (!value) return 'Comparable impact unavailable';
-    return `${value.toFixed(1)} ${baseline.label}`;
+  if (!Wh || Wh <= 0) return 'No impact recorded yet today.';
+  const baseline = ALBA_CONFIG.baselineComparisons && ALBA_CONFIG.baselineComparisons[0];
+  if (!baseline || !baseline.factorWh) return 'Comparable impact unavailable.';
+  const value = (Wh / baseline.factorWh).toFixed(1);
+  return `${baseline.label} for ${value} minutes`;
   }
 
   function formatTotalsTooltip(totals) {
@@ -943,10 +1265,27 @@
     return new Date(timestamp).toISOString().slice(0, 10);
   }
 
+  function getActiveThemeKey() {
+    const theme = state.settings?.theme;
+    if (ALBA_CONFIG.themes && theme && ALBA_CONFIG.themes[theme]) {
+      return theme;
+    }
+    return 'light';
+  }
+
   function applyTheme(element) {
-    if (element && element.classList && !element.classList.contains('alba-theme')) {
+    if (!element || !element.classList) return;
+    if (!element.classList.contains('alba-theme')) {
       element.classList.add('alba-theme');
     }
+    element.dataset.albaTheme = getActiveThemeKey();
+  }
+
+  function refreshThemeTokens() {
+    const themeKey = getActiveThemeKey();
+    document.querySelectorAll('.alba-theme').forEach((node) => {
+      node.dataset.albaTheme = themeKey;
+    });
   }
 
   function countContentImages(container) {
@@ -1132,6 +1471,43 @@
     }
   }
 
+  async function fetchWrappedSummary(totals, dateLabel, signal) {
+    try {
+      const resp = await fetch(`${REMOTE_API_BASE}/wrapped`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          totals,
+          dateLabel,
+          settings: {
+            modelProfile: state.settings?.modelProfile,
+            optimizerEnabled: state.settings?.optimizerEnabled,
+            remoteOptimizer: state.settings?.remoteOptimizer
+          }
+        }),
+        signal
+      });
+      const text = await resp.text();
+      let data = null;
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (err) {
+          console.warn('Unable to parse wrapped response payload', err);
+        }
+      }
+      if (!resp.ok && !data) {
+        throw new Error(`wrapped request failed (${resp.status})`);
+      }
+      return data;
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return null;
+      }
+      throw err;
+    }
+  }
+
   // Remote optimizer implementation
   async function fetchRemoteOptimization(prompt) {
     // Do nothing if remote optimizer disabled in settings
@@ -1139,7 +1515,7 @@
 
     try {
       // Adjust URL to your backend. For local dev use http://localhost:3000/optimize
-      const resp = await fetch("http://localhost:3000/optimize", {
+      const resp = await fetch(`${REMOTE_API_BASE}/optimize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt })
@@ -1158,5 +1534,4 @@
       return null;
     }
   }
-}
 })();

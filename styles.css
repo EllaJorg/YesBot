@@ -2,10 +2,52 @@
   --alba-sage: #6aa484;
   --alba-sage-dark: #4f866b;
   --alba-charcoal: #1f2b27;
+  --alba-text: #1f2b27;
+  --alba-text-muted: #5a6a63;
   --alba-cream: rgba(252, 252, 250, 0.92);
   --alba-border: rgba(31, 43, 39, 0.12);
   --alba-shadow: 0 8px 24px rgba(19, 26, 23, 0.15);
   --alba-font: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --alba-surface: rgba(255, 255, 255, 0.85);
+  --alba-surface-muted: rgba(255, 255, 255, 0.65);
+  --alba-surface-soft: rgba(255, 255, 255, 0.7);
+  --alba-surface-strong: #ffffff;
+  --alba-pill-bg: rgba(255, 255, 255, 0.85);
+  --alba-control-bg: #ffffff;
+}
+
+.alba-theme[data-alba-theme="dark"] {
+  --alba-sage: #8bd8b5;
+  --alba-sage-dark: #5ca284;
+  --alba-charcoal: #0f1a17;
+  --alba-text: #f3faf4;
+  --alba-text-muted: rgba(243, 250, 244, 0.75);
+  --alba-cream: rgba(18, 25, 22, 0.94);
+  --alba-border: rgba(232, 247, 240, 0.22);
+  --alba-shadow: 0 18px 32px rgba(0, 0, 0, 0.55);
+  --alba-surface: rgba(30, 42, 36, 0.92);
+  --alba-surface-muted: rgba(255, 255, 255, 0.07);
+  --alba-surface-soft: rgba(255, 255, 255, 0.12);
+  --alba-surface-strong: rgba(40, 55, 49, 0.98);
+  --alba-pill-bg: rgba(40, 55, 49, 0.9);
+  --alba-control-bg: rgba(40, 55, 49, 0.98);
+}
+
+.alba-theme[data-alba-theme="contrast"] {
+  --alba-sage: #1fbba6;
+  --alba-sage-dark: #0d6f62;
+  --alba-charcoal: #0e1f2c;
+  --alba-text: #0e1f2c;
+  --alba-text-muted: #14384d;
+  --alba-cream: #fdfbef;
+  --alba-border: rgba(14, 31, 44, 0.25);
+  --alba-shadow: 0 12px 28px rgba(20, 32, 41, 0.25);
+  --alba-surface: #ffffff;
+  --alba-surface-muted: #f1f5ff;
+  --alba-surface-soft: rgba(255, 255, 255, 0.95);
+  --alba-surface-strong: #ffffff;
+  --alba-pill-bg: #ffffff;
+  --alba-control-bg: #ffffff;
 }
 
 .alba-impact-label {
@@ -19,9 +61,9 @@
   margin-left: auto;
   align-self: flex-end;
   border-radius: 999px;
-  background: rgba(255, 255, 255, 0.85);
+  background: var(--alba-pill-bg);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   font-size: 12px;
   cursor: default;
 }
@@ -68,19 +110,19 @@
   gap: 12px;
   padding: 6px 10px;
   margin-top: 6px;
-  background: rgba(255, 255, 255, 0.8);
-  border: 1px solid var(--alba-border);
+  background: var(--alba-sage);
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: 12px;
   backdrop-filter: blur(8px);
   font-size: 12px;
-  color: var(--alba-charcoal);
+  color: #fff;
 }
 
 .alba-optimizer-action {
   border: none;
   border-radius: 999px;
   padding: 4px 14px;
-  background: var(--alba-sage);
+  background: var(--alba-charcoal);
   color: #fff;
   font-size: 12px;
   cursor: pointer;
@@ -88,12 +130,12 @@
 }
 
 .alba-optimizer-action:disabled {
-  background: rgba(106, 164, 132, 0.4);
+  background: rgba(31, 43, 39, 0.4);
   cursor: not-allowed;
 }
 
 .alba-optimizer-action:hover:not(:disabled) {
-  background: var(--alba-sage-dark);
+  background: #131b17;
   transform: translateY(-1px);
 }
 
@@ -128,7 +170,7 @@
   font-size: 18px;
   line-height: 1;
   cursor: pointer;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
 }
 
 .alba-panel-body {
@@ -138,7 +180,7 @@
 }
 
 .alba-prompt-block {
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--alba-surface-muted);
   border-radius: 14px;
   border: 1px solid var(--alba-border);
   padding: 10px;
@@ -151,7 +193,7 @@
   position: absolute;
   inset: 0;
   backdrop-filter: blur(2px);
-  background: rgba(255, 255, 255, 0.7);
+  background: var(--alba-surface-soft);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -169,13 +211,13 @@
 
 .alba-block-content {
   font-size: 13px;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   white-space: pre-wrap;
 }
 
 .alba-panel-stats {
   font-size: 12px;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   padding: 8px 10px;
   background: rgba(106, 164, 132, 0.12);
   border-radius: 12px;
@@ -191,7 +233,7 @@
   border: 1px solid var(--alba-border);
   border-radius: 999px;
   padding: 6px 14px;
-  background: #fff;
+  background: var(--alba-surface-strong);
   cursor: pointer;
   font-size: 12px;
 }
@@ -216,12 +258,23 @@
   border-radius: 50%;
   border: none;
   background: transparent;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   font-weight: 600;
   box-shadow: var(--alba-shadow);
   cursor: pointer;
   position: relative;
   isolation: isolate;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+}
+
+.alba-widget-logo {
+  width: 60%;
+  height: 60%;
+  object-fit: contain;
+  pointer-events: none;
 }
 
 .alba-widget-toggle::before {
@@ -253,6 +306,34 @@
   display: none;
 }
 
+.alba-widget-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+  background: var(--alba-surface-muted);
+  padding: 4px;
+  border-radius: 999px;
+  border: 1px solid var(--alba-border);
+}
+
+.alba-widget-tab {
+  flex: 1;
+  border: none;
+  border-radius: 999px;
+  padding: 6px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  background: transparent;
+  color: var(--alba-text);
+  transition: all 120ms ease;
+}
+
+.alba-widget-tab.alba-active {
+  background: var(--alba-sage);
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
+}
+
 .alba-widget.alba-open .alba-widget-card {
   display: block;
 }
@@ -269,6 +350,32 @@
   padding: 2px 0;
 }
 
+.alba-widget-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+}
+
+.alba-widget-summary-link {
+  border: none;
+  background: rgba(106, 164, 132, 0.15);
+  color: var(--alba-sage-dark);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 2px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: transform 100ms ease, background 120ms ease;
+}
+
+.alba-widget-summary-link:hover {
+  background: rgba(106, 164, 132, 0.3);
+  transform: translateY(-1px);
+}
+
 .alba-widget-comparison {
   font-size: 12px;
   color: var(--alba-sage-dark);
@@ -277,7 +384,7 @@
 
 .alba-widget-delta {
   font-size: 12px;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   margin-bottom: 10px;
 }
 
@@ -291,7 +398,7 @@
   flex: 1;
   border-radius: 999px;
   border: 1px solid var(--alba-border);
-  background: #fff;
+  background: var(--alba-surface-strong);
   padding: 6px 0;
   cursor: pointer;
   font-size: 12px;
@@ -344,23 +451,34 @@
 .alba-suggestion-savings {
   font-size: 11px;
   color: var(--alba-sage-dark);
-  background: rgba(255, 255, 255, 0.6);
+  background: var(--alba-surface-muted);
   padding: 3px 8px;
   border-radius: 999px;
   font-weight: 500;
 }
 
 .alba-suggestion-content {
-  background: rgba(255, 255, 255, 0.8);
+  background: var(--alba-surface);
   border-radius: 10px;
   padding: 10px;
   font-size: 13px;
-  color: var(--alba-charcoal);
+  color: var(--alba-text);
   line-height: 1.5;
   margin-bottom: 10px;
   white-space: pre-wrap;
   word-wrap: break-word;
   border: 1px solid rgba(106, 164, 132, 0.2);
+}
+
+.alba-suggestion-impact {
+  font-size: 13px;
+  color: var(--alba-text);
+  line-height: 1.5;
+  margin-bottom: 10px;
+}
+
+.alba-suggestion-impact div + div {
+  margin-top: 4px;
 }
 
 .alba-suggestion-actions {
@@ -381,12 +499,12 @@
 }
 
 .alba-suggestion-dismiss {
-  background: #fff;
-  color: var(--alba-charcoal);
+  background: var(--alba-surface-strong);
+  color: var(--alba-text);
 }
 
 .alba-suggestion-dismiss:hover {
-  background: rgba(0, 0, 0, 0.05);
+  background: var(--alba-surface-muted);
 }
 
 .alba-suggestion-accept {
@@ -400,6 +518,207 @@
   border-color: var(--alba-sage-dark);
   transform: translateY(-1px);
   box-shadow: 0 2px 8px rgba(106, 164, 132, 0.3);
+}
+
+.alba-wrapped-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(10, 14, 12, 0.65);
+  backdrop-filter: blur(10px);
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  z-index: 2147483647;
+  font-family: var(--alba-font);
+}
+
+.alba-wrapped-overlay.alba-wrapped-visible {
+  display: flex;
+}
+
+.alba-wrapped-shell {
+  width: min(520px, calc(100vw - 32px));
+  max-height: min(640px, calc(100vh - 48px));
+  overflow-y: auto;
+  border-radius: 28px;
+  padding: 28px;
+  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.35)),
+    linear-gradient(135deg, #0f2027, #2c5364);
+  color: #fff;
+  position: relative;
+  box-shadow: 0 35px 80px rgba(0, 0, 0, 0.45);
+}
+
+.alba-wrapped-close {
+  position: absolute;
+  top: 16px;
+  right: 16px;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: none;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  font-size: 20px;
+  cursor: pointer;
+  backdrop-filter: blur(4px);
+}
+
+.alba-wrapped-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.alba-wrapped-head {
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.alba-wrapped-title {
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+.alba-wrapped-subhead {
+  font-size: 16px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.alba-wrapped-tagline {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.75);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.alba-wrapped-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 28px 0;
+  text-align: center;
+}
+
+.alba-wrapped-spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  border: 3px solid rgba(255, 255, 255, 0.2);
+  border-top-color: #fff;
+  animation: alba-spin 1s linear infinite;
+}
+
+@keyframes alba-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.alba-wrapped-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 14px;
+}
+
+.alba-wrapped-card {
+  border-radius: 22px;
+  padding: 18px;
+  background: var(--alba-wrapped-gradient, linear-gradient(135deg, #b24592, #f15f79));
+  box-shadow: 0 20px 35px rgba(0, 0, 0, 0.35);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.alba-wrapped-card-title {
+  text-transform: uppercase;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.alba-wrapped-card-stat {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.alba-wrapped-card-value {
+  font-size: 28px;
+  font-weight: 700;
+}
+
+.alba-wrapped-card-label {
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.alba-wrapped-card-analogy {
+  font-size: 14px;
+  line-height: 1.4;
+  margin: 6px 0 0;
+}
+
+.alba-wrapped-card-tip {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.alba-wrapped-footer {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.alba-wrapped-footer p {
+  font-weight: 600;
+  margin: 0;
+}
+
+.alba-wrapped-error {
+  text-align: center;
+  padding: 20px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.25);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.alba-wrapped-retry {
+  border: none;
+  border-radius: 999px;
+  padding: 10px 20px;
+  background: rgba(255, 255, 255, 0.2);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.alba-wrapped-retry:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+@media (min-width: 540px) {
+  .alba-wrapped-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .alba-wrapped-grid .alba-wrapped-card:first-child {
+    grid-column: span 2;
+  }
 }
 
 @media (max-width: 768px) {
