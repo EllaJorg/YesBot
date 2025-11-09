@@ -95,6 +95,14 @@
     lyrics: [0, 0, 1]
   };
 
+  const REMOTE_API_BASE = 'http://localhost:3000';
+  const WRAPPED_GRADIENTS = [
+    'linear-gradient(135deg, #f97794 0%, #623aa2 100%)',
+    'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
+    'linear-gradient(135deg, #f6d365 0%, #fda085 100%)',
+    'linear-gradient(135deg, #5ee7df 0%, #b490ca 100%)'
+  ];
+
   const state = {
     settings: { ...ALBA_CONFIG.defaultSettings },
     dailyTotals: {},
@@ -107,7 +115,10 @@
     debounceTimers: new WeakMap(),
     featuresActive: false,
     conversationId: null,
-    locationTrackerInitialized: false
+    locationTrackerInitialized: false,
+    wrappedPanel: null,
+    wrappedAbortController: null,
+    wrappedEscHandler: null
   };
 
   if (!state.site) {
@@ -720,12 +731,29 @@
     const displayTotals = activeTab === 'chat' ? chatStats.totals : todayTotals;
     const heading = activeTab === 'chat' ? 'This Chat' : "Today's Totals";
     const tooltipCopy = formatTotalsTooltip(displayTotals);
+    const summaryToggle =
+      activeTab === 'today'
+        ? '<button type="button" class="alba-widget-summary-link" aria-label="Open Spotify-style summary">Summary</button>'
+        : '';
     state.widget.totalsEl.innerHTML =
-      `<strong>${heading}</strong>
+      `<div class="alba-widget-heading">
+         <strong>${heading}</strong>
+         ${summaryToggle}
+       </div>
        <div class="alba-widget-totals-line alba-tooltip-host">
          ${displayTotals.Wh.toFixed(2)} Wh | ${displayTotals.gCO2.toFixed(2)} g CO2 | ${displayTotals.waterMl.toFixed(0)} mL
          <div class="alba-tooltip">${tooltipCopy}</div>
        </div>`;
+    if (activeTab === 'today') {
+      const summaryBtn = state.widget.totalsEl.querySelector('.alba-widget-summary-link');
+      if (summaryBtn) {
+        summaryBtn.addEventListener('click', (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          showWrappedSummary();
+        });
+      }
+    }
     if (activeTab === 'today') {
       const previous = state.dailyTotals[getPreviousDayKey(key)] || { Wh: 0, gCO2: 0, waterMl: 0 };
       state.widget.comparisonEl.textContent = formatComparison(todayTotals.Wh);
@@ -745,6 +773,230 @@
     const budgetWh = 10; // Adjustable daily reference for ring progress.
     const progress = Math.min(1, (displayTotals.Wh || 0) / budgetWh);
     state.widget.root.style.setProperty('--alba-progress', progress.toString());
+  }
+
+  function showWrappedSummary() {
+    const panel = ensureWrappedPanel();
+    applyTheme(panel.overlay);
+    panel.overlay.classList.add('alba-wrapped-visible');
+    const key = getTodayKey();
+    ensureDailyTotalsKey(key);
+    const todayTotals = state.dailyTotals[key] || { Wh: 0, gCO2: 0, waterMl: 0 };
+    const totals = {
+      Wh: Number(todayTotals.Wh || 0),
+      gCO2: Number(todayTotals.gCO2 || 0),
+      waterMl: Number(todayTotals.waterMl || 0)
+    };
+    const dateLabel = formatWrappedDate();
+    renderWrappedLoading(totals, dateLabel);
+
+    if (!state.wrappedEscHandler) {
+      state.wrappedEscHandler = (event) => {
+        if (event.key === 'Escape') {
+          hideWrappedSummary();
+        }
+      };
+    }
+    document.removeEventListener('keydown', state.wrappedEscHandler);
+    document.addEventListener('keydown', state.wrappedEscHandler);
+
+    state.wrappedAbortController?.abort();
+    const controller = new AbortController();
+    state.wrappedAbortController = controller;
+
+    if (!totals.Wh && !totals.gCO2 && !totals.waterMl) {
+      state.wrappedAbortController = null;
+      renderWrappedError('No impact recorded yet. Jam with an AI model to unlock your eco wrapped!', totals, dateLabel);
+      return;
+    }
+
+    fetchWrappedSummary(totals, dateLabel, controller.signal)
+      .then((payload) => {
+        if (controller.signal.aborted) return;
+        if (payload && Array.isArray(payload.cards)) {
+          renderWrappedPayload(payload, totals, dateLabel);
+        } else if (payload) {
+          renderWrappedPayload(payload, totals, dateLabel);
+        } else {
+          renderWrappedError('The storyteller came back empty. Try again in a moment.', totals, dateLabel);
+        }
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        console.warn('wrapped summary unavailable', err);
+        renderWrappedError(
+          `Could not reach ${REMOTE_API_BASE}/wrapped. Start the Alba API helper (npm start) and try again.`,
+          totals,
+          dateLabel
+        );
+      })
+      .finally(() => {
+        if (state.wrappedAbortController === controller) {
+          state.wrappedAbortController = null;
+        }
+      });
+  }
+
+  function hideWrappedSummary() {
+    state.wrappedAbortController?.abort();
+    state.wrappedAbortController = null;
+    if (state.wrappedPanel?.overlay) {
+      state.wrappedPanel.overlay.classList.remove('alba-wrapped-visible');
+    }
+    if (state.wrappedEscHandler) {
+      document.removeEventListener('keydown', state.wrappedEscHandler);
+    }
+  }
+
+  function ensureWrappedPanel() {
+    if (state.wrappedPanel) {
+      return state.wrappedPanel;
+    }
+    const overlay = document.createElement('div');
+    overlay.className = 'alba-wrapped-overlay alba-theme';
+    overlay.setAttribute('role', 'dialog');
+    overlay.setAttribute('aria-modal', 'true');
+
+    const shell = document.createElement('div');
+    shell.className = 'alba-wrapped-shell';
+
+    const closeBtn = document.createElement('button');
+    closeBtn.type = 'button';
+    closeBtn.className = 'alba-wrapped-close';
+    closeBtn.setAttribute('aria-label', 'Close Spotify-style summary');
+    closeBtn.textContent = '×';
+
+    const content = document.createElement('div');
+    content.className = 'alba-wrapped-body';
+
+    shell.appendChild(closeBtn);
+    shell.appendChild(content);
+    overlay.appendChild(shell);
+    document.body.appendChild(overlay);
+
+    closeBtn.addEventListener('click', hideWrappedSummary);
+    overlay.addEventListener('click', (event) => {
+      if (event.target === overlay) {
+        hideWrappedSummary();
+      }
+    });
+
+    state.wrappedPanel = { overlay, shell, content };
+    return state.wrappedPanel;
+  }
+
+  function renderWrappedLoading(totals, dateLabel) {
+    const panel = ensureWrappedPanel();
+    panel.content.innerHTML = `
+      <header class="alba-wrapped-head">
+        <p class="alba-wrapped-title">Alba Eco Wrapped</p>
+        <p class="alba-wrapped-subhead">${dateLabel}</p>
+        <p class="alba-wrapped-tagline">${formatWrappedMetrics(totals)}</p>
+      </header>
+      <div class="alba-wrapped-loading">
+        <div class="alba-wrapped-spinner"></div>
+        <p>Spinning up your eco analogies...</p>
+      </div>`;
+  }
+
+  function renderWrappedError(message, totals, dateLabel) {
+    const panel = ensureWrappedPanel();
+    panel.content.innerHTML = `
+      <header class="alba-wrapped-head">
+        <p class="alba-wrapped-title">Alba Eco Wrapped</p>
+        <p class="alba-wrapped-subhead">${dateLabel}</p>
+        <p class="alba-wrapped-tagline">${formatWrappedMetrics(totals)}</p>
+      </header>
+      <div class="alba-wrapped-error">
+        <p>${message}</p>
+        <button type="button" class="alba-wrapped-retry">Retry</button>
+      </div>`;
+    const retryBtn = panel.content.querySelector('.alba-wrapped-retry');
+    if (retryBtn) {
+      retryBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        showWrappedSummary();
+      });
+    }
+  }
+
+  function renderWrappedPayload(payload, totals, dateLabel) {
+    const panel = ensureWrappedPanel();
+    const sourceCards =
+      Array.isArray(payload.cards) && payload.cards.length ? payload.cards : buildLocalWrappedCards(totals);
+    const cards = sourceCards.slice(0, 3).map((card, idx) => {
+      return `
+        <article class="alba-wrapped-card" style="--alba-wrapped-gradient:${getWrappedGradient(idx)}">
+          <p class="alba-wrapped-card-title">${card.title || 'Highlight'}</p>
+          <p class="alba-wrapped-card-stat">
+            <span class="alba-wrapped-card-value">${card.statValue || ''}</span>
+            <span class="alba-wrapped-card-label">${card.statLabel || ''}</span>
+          </p>
+          <p class="alba-wrapped-card-analogy">${card.analogy || ''}</p>
+          <p class="alba-wrapped-card-tip">${card.tip || ''}</p>
+        </article>`;
+    }).join('');
+
+    panel.content.innerHTML = `
+      <header class="alba-wrapped-head">
+        <p class="alba-wrapped-title">${payload.headline || 'Alba Eco Wrapped'}</p>
+        <p class="alba-wrapped-subhead">${payload.subhead || dateLabel}</p>
+        <p class="alba-wrapped-tagline">${formatWrappedMetrics(totals)}</p>
+      </header>
+      <section class="alba-wrapped-grid">
+        ${cards}
+      </section>
+      <footer class="alba-wrapped-footer">
+        <p>${payload.cta || ''}</p>
+        <span>${payload.footnote || 'Estimates rely on Alba defaults only.'}</span>
+      </footer>`;
+  }
+
+  function getWrappedGradient(index) {
+    return WRAPPED_GRADIENTS[index % WRAPPED_GRADIENTS.length];
+  }
+
+  function formatWrappedDate(date = new Date()) {
+    return date.toLocaleDateString(undefined, { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+
+  function formatWrappedMetrics(totals) {
+    return `${totals.Wh.toFixed(2)} Wh • ${totals.gCO2.toFixed(2)} g CO₂ • ${totals.waterMl.toFixed(0)} mL`;
+  }
+
+  function buildLocalWrappedCards(totals) {
+    const ledMinutes = totals.Wh ? (totals.Wh / 0.008).toFixed(1) : '0';
+    const scooterKm = totals.gCO2 ? (totals.gCO2 / 12).toFixed(1) : '0';
+    const waterPerc = totals.waterMl ? ((totals.waterMl / 9500) * 100).toFixed(1) : '0';
+    return [
+      {
+        title: 'Energy Mood',
+        statLabel: 'Wh burned',
+        statValue: `${totals.Wh.toFixed(2)} Wh`,
+        analogy: totals.Wh
+          ? `Roughly the juice of a smart speaker vibing for ${ledMinutes} minutes.`
+          : 'No watts logged yet — spotless record!',
+        tip: 'Batch requests instead of sending every micro-thought.'
+      },
+      {
+        title: 'Carbon Chorus',
+        statLabel: 'CO₂',
+        statValue: `${totals.gCO2.toFixed(2)} g`,
+        analogy: totals.gCO2
+          ? `Similar to a ${scooterKm} km e-scooter ride worth of CO₂.`
+          : 'Ask something new to reveal your carbon chorus.',
+        tip: 'Reuse earlier answers before generating fresh ones.'
+      },
+      {
+        title: 'Water Remix',
+        statLabel: 'Water',
+        statValue: `${totals.waterMl.toFixed(0)} mL`,
+        analogy: totals.waterMl
+          ? `About ${waterPerc}% of a short shower — still a small splash.`
+          : 'Keep riffing to see the ripple effect.',
+        tip: 'Stay text-only to minimize the water sample rate.'
+      }
+    ];
   }
 
   function exportHistory() {
@@ -1199,6 +1451,35 @@
     }
   }
 
+  async function fetchWrappedSummary(totals, dateLabel, signal) {
+    try {
+      const resp = await fetch(`${REMOTE_API_BASE}/wrapped`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ totals, dateLabel }),
+        signal
+      });
+      const text = await resp.text();
+      let data = null;
+      if (text) {
+        try {
+          data = JSON.parse(text);
+        } catch (err) {
+          console.warn('Unable to parse wrapped response payload', err);
+        }
+      }
+      if (!resp.ok && !data) {
+        throw new Error(`wrapped request failed (${resp.status})`);
+      }
+      return data;
+    } catch (err) {
+      if (err.name === 'AbortError') {
+        return null;
+      }
+      throw err;
+    }
+  }
+
   // Remote optimizer implementation
   async function fetchRemoteOptimization(prompt) {
     // Do nothing if remote optimizer disabled in settings
@@ -1206,7 +1487,7 @@
 
     try {
       // Adjust URL to your backend. For local dev use http://localhost:3000/optimize
-      const resp = await fetch("http://localhost:3000/optimize", {
+      const resp = await fetch(`${REMOTE_API_BASE}/optimize`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt })
