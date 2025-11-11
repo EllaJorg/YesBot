@@ -1,6 +1,6 @@
 # Alba
 
-Alba is a Chrome extension plus lightweight Node server that gives AI power-users a live view of the energy, carbon, and water cost of every prompt. It wraps the most common chat surfaces (ChatGPT, Claude, Gemini, Perplexity) with inline impact estimates, a prompt optimizer, and a daily footprint recap so people can ship work while staying within a climate budget.
+Alba is a Chrome extension plus lightweight Node server that gives AI power-users a live view of the energy, carbon, and water cost of every prompt. It wraps the most common chat surfaces (ChatGPT, Gemini, etc.) with inline impact estimates, a prompt optimizer, and a daily footprint recap so people can ship work while staying within a climate budget.
 
 ## Highlights
 - **Real-time footprint labels** – as you type, Alba estimates watt-hours, grams CO₂, and water milliliters based on model size, region, and modality hints.
