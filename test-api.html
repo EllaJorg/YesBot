@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Alba API Tester</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .test-section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        button {
+            background: #0070f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        button:hover {
+            background: #0051cc;
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: #f5f5f5;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 14px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 10px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        label {
+            font-weight: bold;
+            display: block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <h1>Alba API Tester</h1>
+    <p>Test your Vercel API endpoints</p>
+
+    <div class="test-section">
+        <h2>Test /optimize Endpoint</h2>
+        <label>API URL:</label>
+        <input type="text" id="optimizeUrl" value="http://localhost:3000/optimize">
+
+        <label>Prompt:</label>
+        <textarea id="optimizePrompt" rows="3">Please help me write a Python function that calculates the factorial of a number</textarea>
+
+        <button onclick="testOptimize()">Test Optimize</button>
+        <div id="optimizeResult" class="result" style="display:none;"></div>
+    </div>
+
+    <div class="test-section">
+        <h2>Test /wrapped Endpoint</h2>
+        <label>API URL:</label>
+        <input type="text" id="wrappedUrl" value="http://localhost:3000/wrapped">
+
+        <label>Energy (Wh):</label>
+        <input type="number" id="wrappedWh" value="100">
+
+        <label>Carbon (gCO2):</label>
+        <input type="number" id="wrappedGCO2" value="50">
+
+        <label>Water (mL):</label>
+        <input type="number" id="wrappedWater" value="200">
+
+        <button onclick="testWrapped()">Test Wrapped</button>
+        <div id="wrappedResult" class="result" style="display:none;"></div>
+    </div>
+
+    <script>
+        async function testOptimize() {
+            const url = document.getElementById('optimizeUrl').value;
+            const prompt = document.getElementById('optimizePrompt').value;
+            const resultDiv = document.getElementById('optimizeResult');
+
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Loading...';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({ prompt })
+                });
+
+                const data = await response.json();
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+
+        async function testWrapped() {
+            const url = document.getElementById('wrappedUrl').value;
+            const Wh = parseFloat(document.getElementById('wrappedWh').value);
+            const gCO2 = parseFloat(document.getElementById('wrappedGCO2').value);
+            const waterMl = parseFloat(document.getElementById('wrappedWater').value);
+            const resultDiv = document.getElementById('wrappedResult');
+
+            resultDiv.style.display = 'block';
+            resultDiv.textContent = 'Loading...';
+
+            try {
+                const response = await fetch(url, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        totals: { Wh, gCO2, waterMl },
+                        dateLabel: new Date().toISOString().slice(0, 10)
+                    })
+                });
+
+                const data = await response.json();
+                resultDiv.textContent = JSON.stringify(data, null, 2);
+            } catch (error) {
+                resultDiv.textContent = 'Error: ' + error.message;
+            }
+        }
+    </script>
+</body>
+</html>
