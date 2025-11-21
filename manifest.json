@@ -4,6 +4,9 @@
   "description": "Privacy-first AI impact estimator with prompt optimizer and daily footprint tracker.",
   "version": "0.1.0",
   "permissions": ["storage"],
+  "host_permissions": [
+    "https://alba-ten.vercel.app/*"
+  ],
   "icons": {
     "16": "icons/icon16.png",
     "48": "icons/icon48.png",
