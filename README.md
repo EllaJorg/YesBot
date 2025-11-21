@@ -63,3 +63,37 @@ Alba is a Chrome extension plus lightweight Node server that gives AI power-user
 
 ## License
 ISC – see `package.json` for details.
+
+## References
+The following are sources where we obtained our statistics for the energy emission calculations.
+
+### Grid CO₂ Emissions & Regional Data
+- [Ember Global Electricity Review 2025](https://ember-energy.org/latest-insights/global-electricity-review-2025/) – 2024 grid carbon intensity by region
+- [Our World in Data - Carbon Intensity of Electricity](https://ourworldindata.org/grapher/carbon-intensity-electricity) – historical and current CO₂ emissions factors
+- [IEA Emissions Factors 2024](https://www.iea.org/data-and-statistics/data-product/emissions-factors-2024) – official international energy agency data
+- [Electricity Maps](https://app.electricitymaps.com/) – live 24/7 CO₂ emissions by region
+
+### Water Consumption in Electricity Generation
+
+**United States**
+- [NREL - Consumptive Water Use for U.S. Power Production](https://docs.nrel.gov/docs/fy04osti/33905.pdf) – consumptive and withdrawal water data by fuel type and technology
+- [U.S. EIA - Water Use in U.S. Electricity Generation](https://www.eia.gov/todayinenergy/detail.php?id=56820) – recent trends and water efficiency gains (2.0 L/kWh average withdrawal intensity)
+- [USGS - Thermoelectric Power Water Use](https://www.usgs.gov/mission-areas/water-resources/science/thermoelectric-power-water-use) – regional thermoelectric water consumption by fuel type
+
+**Europe (EU)**
+- [Thunder Said Energy - Water Intensity of Power Generation](https://thundersaidenergy.com/downloads/water-intensity-of-power-generation/) – water intensity by fuel type (nuclear, coal, natural gas)
+- [European Electricity Review 2024](https://ember-energy.org/latest-insights/european-electricity-review-2024/eu-electricity-trends/) – EU electricity generation mix and renewable penetration
+
+**Asia-Pacific (APAC)**
+- [IEA - Global Water Consumption in the Energy Sector](https://www.iea.org/data-and-statistics/charts/global-water-consumption-in-the-energy-sector-by-fuel-and-power-generation-type-in-the-stated-policies-scenario-2021-and-2030) – regional water consumption by fuel type
+- [World Water Footprint Network - Consumptive Water Footprint of Electricity](https://waterfootprint.org/resources/Mekonnen-et-al-2015.pdf) – global and regional water footprint analysis by country
+
+**General**
+- [IEEE Spectrum - How Much Water Does It Take to Make Electricity?](https://spectrum.ieee.org/how-much-water-does-it-take-to-make-electricity) – comparative water usage across generation technologies
+
+### AI Model Energy Consumption
+- [arxiv.org - How Hungry is AI? Benchmarking Energy, Water, and Carbon Footprint of LLM Inference (2025)](https://arxiv.org/html/2505.09598v1) – recent LLM energy and water consumption benchmarks
+- [arxiv.org - Benchmarking the Energy Costs of Large Language Model Inference](https://arxiv.org/pdf/2310.03003) – detailed energy cost analysis across model sizes
+- [Epoch AI - How Much Energy Does ChatGPT Use?](https://epoch.ai/gradient-updates/how-much-energy-does-chatgpt-use) – energy consumption estimates for popular models
+
+
