@@ -1,0 +1,19 @@
+{
+  "version": 2,
+  "builds": [
+    {
+      "src": "api/**/*.js",
+      "use": "@vercel/node"
+    }
+  ],
+  "routes": [
+    {
+      "src": "/optimize",
+      "dest": "/api/optimize.js"
+    },
+    {
+      "src": "/wrapped",
+      "dest": "/api/wrapped.js"
+    }
+  ]
+}
