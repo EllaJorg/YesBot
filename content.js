@@ -95,7 +95,7 @@
     lyrics: [0, 0, 1]
   };
 
-  const REMOTE_API_BASE = 'http://localhost:3000';
+  const REMOTE_API_BASE = 'https://alba-ten.vercel.app';
   const WRAPPED_GRADIENTS = [
     'linear-gradient(135deg, #f97794 0%, #623aa2 100%)',
     'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
