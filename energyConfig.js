@@ -62,9 +62,9 @@
     },
     regions: {
       global: { grid_CO2_g_per_kWh: 400, water_L_per_kWh: 1.0 },
-      us: { grid_CO2_g_per_kWh: 370, water_L_per_kWh: 0.8 },
-      eu: { grid_CO2_g_per_kWh: 275, water_L_per_kWh: 0.6 },
-      apac: { grid_CO2_g_per_kWh: 520, water_L_per_kWh: 1.2 }
+      us: { grid_CO2_g_per_kWh: 369, water_L_per_kWh: 2.0 },
+      eu: { grid_CO2_g_per_kWh: 213, water_L_per_kWh: 1.1 },
+      apac: { grid_CO2_g_per_kWh: 573, water_L_per_kWh: 1.5 }
     },
     defaultSettings: {
       enabled: true,
