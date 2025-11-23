@@ -3,29 +3,19 @@
   "version": "1.0.0",
   "description": "Alba is a Chrome extension that brings environmental transparency to AI usage. It overlays real-time estimates of energy, carbon, and water use for every AI query — helping users understand, reduce, and report the footprint of their digital interactions.",
   "main": "content.js",
-  "type": "module",
   "scripts": {
     "build": "node scripts/build.cjs",
-    "start": "node api/server.js",
-    "dev": "vercel dev",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/lindsaygross/Alba.git"
   },
-  "keywords": [],
+  "keywords": ["chrome-extension", "sustainability", "ai", "carbon-footprint"],
   "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/lindsaygross/Alba/issues"
   },
-  "homepage": "https://github.com/lindsaygross/Alba#readme",
-  "dependencies": {
-    "body-parser": "^2.2.0",
-    "cors": "^2.8.5",
-    "dotenv": "^17.2.3",
-    "express": "^5.1.0",
-    "openai": "^6.8.1"
-  }
+  "homepage": "https://github.com/lindsaygross/Alba#readme"
 }
