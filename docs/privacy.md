@@ -45,12 +45,12 @@ All calculations and features operate entirely within your browser:
 
 ### Optional AI-Powered Features
 
-Alba offers optional AI-powered prompt optimization that uses the GitHub Models API:
+Alba offers optional AI-powered prompt optimization that uses Azure's AI Models service:
 
 - **Opt-In Only:** This feature is disabled by default and requires your explicit consent to enable
-- **When Enabled:** Your prompt text is sent to GitHub Models API for advanced optimization suggestions
+- **When Enabled:** Your prompt text is sent to Azure AI Models API (models.inference.ai.azure.com) for advanced optimization suggestions
 - **Your Control:** You can enable or disable this feature at any time in the extension settings
-- **Third-Party Privacy:** When using this feature, GitHub's privacy policy applies to data sent to their API
+- **Third-Party Privacy:** When using this feature, Microsoft Azure's privacy policy applies to data sent to their API
 
 ## Data You Control
 
@@ -72,11 +72,11 @@ You have complete control over your data:
 
 ## Third-Party Services
 
-### GitHub Models API (Optional)
+### Azure AI Models API (Optional)
 
 If you enable AI-powered optimization:
-- Your prompts are sent to GitHub Models API for processing
-- GitHub's privacy policy and terms of service apply
+- Your prompts are sent to Azure AI Models API (models.inference.ai.azure.com) for processing
+- Microsoft Azure's privacy policy and terms of service apply
 - You can disable this feature at any time
 
 ### No Other Third Parties
@@ -88,8 +88,9 @@ Alba does not integrate with any analytics services, advertising networks, or ot
 Alba requests only the permissions necessary for its functionality:
 
 - **Storage:** To save your preferences and usage data locally
-- **Active Tab:** To interact with AI chat websites you're currently using
-- **Host Permissions:** To inject our impact tracking features on supported AI platforms (ChatGPT, Claude, Gemini, Perplexity)
+- **Host Permissions:** To:
+  - Interact with AI chat websites (ChatGPT, Claude, Gemini, Perplexity) to inject impact tracking features
+  - Connect to Azure AI Models API (when AI-powered optimization is enabled)
 
 These permissions are used solely for the stated functionality and not for data collection or tracking.
 
