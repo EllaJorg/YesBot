@@ -74,6 +74,8 @@ function copyFile(src, dest) {
 function injectToken() {
   const token = process.env.GITHUB_TOKEN;
 
+  log(`GITHUB_TOKEN environment variable: ${token ? 'SET (' + token.length + ' chars)' : 'NOT SET'}`);
+
   if (!token) {
     log('WARNING: GITHUB_TOKEN not set. AI features will be disabled.');
     log('Set GITHUB_TOKEN environment variable to enable AI features.');
@@ -87,7 +89,12 @@ function injectToken() {
   }
 
   let content = fs.readFileSync(aiClientPath, 'utf8');
+  const before = content.includes("'__GITHUB_TOKEN__'");
   content = content.replace("'__GITHUB_TOKEN__'", `'${token}'`);
+  const after = content.includes("'__GITHUB_TOKEN__'");
+
+  log(`Token placeholder found before: ${before}, after: ${after}`);
+
   fs.writeFileSync(aiClientPath, content);
 
   log('Injected GitHub token into aiClient.js');
