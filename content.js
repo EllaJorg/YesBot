@@ -95,7 +95,7 @@
     lyrics: [0, 0, 1]
   };
 
-  const REMOTE_API_BASE = 'https://alba-ten.vercel.app';
+  // AI client is loaded via aiClient.js (injected before content.js in manifest)
   const WRAPPED_GRADIENTS = [
     'linear-gradient(135deg, #f97794 0%, #623aa2 100%)',
     'linear-gradient(135deg, #a18cd1 0%, #fbc2eb 100%)',
@@ -825,7 +825,7 @@
         if (controller.signal.aborted) return;
         console.warn('wrapped summary unavailable', err);
         renderWrappedError(
-          `Could not reach ${REMOTE_API_BASE}/wrapped. Start the Alba API helper (npm start) and try again.`,
+          'Could not generate summary. Check that the extension is properly configured.',
           totals,
           dateLabel
         );
@@ -1473,33 +1473,24 @@
 
   async function fetchWrappedSummary(totals, dateLabel, signal) {
     try {
-      const resp = await fetch(`${REMOTE_API_BASE}/wrapped`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          totals,
-          dateLabel,
-          settings: {
-            modelProfile: state.settings?.modelProfile,
-            optimizerEnabled: state.settings?.optimizerEnabled,
-            remoteOptimizer: state.settings?.remoteOptimizer
-          }
-        }),
-        signal
-      });
-      const text = await resp.text();
-      let data = null;
-      if (text) {
-        try {
-          data = JSON.parse(text);
-        } catch (err) {
-          console.warn('Unable to parse wrapped response payload', err);
-        }
+      // Check if aborted before starting
+      if (signal?.aborted) return null;
+
+      const settings = {
+        modelProfile: state.settings?.modelProfile,
+        optimizerEnabled: state.settings?.optimizerEnabled,
+        remoteOptimizer: state.settings?.remoteOptimizer
+      };
+
+      // Use the AI client directly (no external API needed)
+      if (globalThis.ALBA_AI_CLIENT) {
+        const result = await globalThis.ALBA_AI_CLIENT.generateWrappedSummary(totals, dateLabel, settings);
+        return result;
       }
-      if (!resp.ok && !data) {
-        throw new Error(`wrapped request failed (${resp.status})`);
-      }
-      return data;
+
+      // Fallback if AI client not loaded
+      console.warn('[Alba] AI client not available, using local fallback');
+      return buildLocalWrappedCards(totals);
     } catch (err) {
       if (err.name === 'AbortError') {
         return null;
@@ -1508,29 +1499,22 @@
     }
   }
 
-  // Remote optimizer implementation
+  // Remote optimizer implementation - now uses direct GitHub Models API
   async function fetchRemoteOptimization(prompt) {
     // Do nothing if remote optimizer disabled in settings
     if (!state.settings.remoteOptimizer) return null;
 
+    // Check if AI client is available and configured
+    if (!globalThis.ALBA_AI_CLIENT?.isConfigured?.()) {
+      console.warn('[Alba] AI client not configured, skipping remote optimization');
+      return null;
+    }
+
     try {
-      // Adjust URL to your backend. For local dev use http://localhost:3000/optimize
-      const resp = await fetch(`${REMOTE_API_BASE}/optimize`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt })
-      });
-
-      if (!resp.ok) {
-        console.warn("Remote optimizer error", resp.status, await resp.text());
-        return null;
-      }
-
-      const data = await resp.json();
-      // Expect { optimized: "..." } (server's response shape)
-      return (data && data.optimized) ? data.optimized.trim() : null;
+      const optimized = await globalThis.ALBA_AI_CLIENT.optimizePrompt(prompt);
+      return optimized;
     } catch (err) {
-      console.error("fetchRemoteOptimization failed:", err);
+      console.error('[Alba] fetchRemoteOptimization failed:', err);
       return null;
     }
   }
