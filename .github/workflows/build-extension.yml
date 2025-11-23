@@ -2,7 +2,7 @@ name: Build Chrome Extension
 
 on:
   push:
-    branches: [main, master]
+    branches: [main, master, 'claude/**']
   pull_request:
     branches: [main, master]
   workflow_dispatch:  # Allow manual trigger
