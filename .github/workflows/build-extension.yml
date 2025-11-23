@@ -25,7 +25,7 @@ jobs:
 
       - name: Build extension
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_MODELS_PAT }}
+          GITHUB_TOKEN: ${{ secrets.GH_MODELS_PAT }}
         run: npm run build
 
       - name: Upload extension artifact
