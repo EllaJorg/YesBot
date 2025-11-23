@@ -1,6 +1,6 @@
 # Privacy Policy for Alba
 
-**Last Updated:** November 23, 2025
+**Last Updated:** November 23, 2024
 
 ## Overview
 
@@ -87,12 +87,11 @@ Alba does not integrate with any analytics services, advertising networks, or ot
 
 Alba requests only the permissions necessary for its functionality:
 
-- **Storage:** To save your preferences and usage data locally
-- **Host Permissions:** To:
-  - Interact with AI chat websites (ChatGPT, Claude, Gemini, Perplexity) to inject impact tracking features
-  - Connect to Azure AI Models API (when AI-powered optimization is enabled)
+- **Storage:** To save your preferences and usage data locally on your device
+- **Host Permission (Azure AI):** Access to Azure AI Models API (models.inference.ai.azure.com) to enable optional AI-powered prompt optimization when you choose to use this feature
+- **Content Scripts:** Permission to run on specific AI chat websites (ChatGPT, Claude, Gemini, Perplexity) to inject the impact tracking interface
 
-These permissions are used solely for the stated functionality and not for data collection or tracking.
+These permissions are used solely for the stated functionality and not for data collection or tracking. The content scripts only interact with the visible web pages you're using to display impact estimates and optimization suggestions.
 
 ## Open Source Transparency
 
