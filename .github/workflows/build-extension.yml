@@ -1,0 +1,44 @@
+name: Build Chrome Extension
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build extension
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_MODELS_PAT }}
+        run: node scripts/build.js
+
+      - name: Upload extension artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: alba-extension
+          path: dist/
+          retention-days: 30
+
+      - name: Upload ZIP package
+        uses: actions/upload-artifact@v4
+        with:
+          name: alba-extension-zip
+          path: dist/alba-extension.zip
+          retention-days: 30
+          if-no-files-found: ignore
