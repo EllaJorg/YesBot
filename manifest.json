@@ -3,6 +3,7 @@
   "name": "Alba",
   "description": "Privacy-first AI impact estimator with prompt optimizer and daily footprint tracker.",
   "version": "1.0.0",
+  "homepage_url": "https://lindsaygross.github.io/Alba/",
   "permissions": ["storage"],
   "host_permissions": [
     "https://models.inference.ai.azure.com/*"
