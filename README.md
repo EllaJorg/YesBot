@@ -2,6 +2,13 @@
 
 Alba is a privacy-first Chrome extension that gives AI users a live view of the energy, carbon, and water cost of every prompt. It wraps popular AI chat surfaces (ChatGPT, Claude, Gemini, Perplexity) with inline impact estimates, a prompt optimizer, and a daily footprint recap. Here is a demo video: https://youtu.be/JcKfJTfR9LI?si=hg45tdKO5fcamjoS.
 
+## Citation
+
+If you use ALBA in your research or work, please cite it using the following DOI:
+
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18675123.svg)](https://doi.org/10.5281/zenodo.18675123)
+
+You can cite all versions by using the DOI [10.5281/zenodo.18675123](https://doi.org/10.5281/zenodo.18675123). This DOI represents all versions and will always resolve to the latest one.
 ## Highlights
 - **Real-time footprint labels** – as you type, Alba estimates watt-hours, grams CO₂, and water milliliters based on model size, region, and modality.
 - **Inline prompt optimizer** – local heuristics trim filler immediately; optional AI optimization (via GitHub Models) proposes a compressed rewrite showing % savings before you accept.
