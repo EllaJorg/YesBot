@@ -86,7 +86,9 @@ function injectToken() {
   }
 
   let content = fs.readFileSync(aiClientPath, 'utf8');
-  content = content.replace("'__GITHUB_TOKEN__'", `'${token}'`);
+  // Escape special characters to prevent breaking JS string literals
+  const safeToken = token.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
+  content = content.replace("'__GITHUB_TOKEN__'", `'${safeToken}'`);
   fs.writeFileSync(aiClientPath, content);
 
   log('Injected GitHub token into aiClient.js');
