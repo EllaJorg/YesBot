@@ -2,7 +2,7 @@
   "manifest_version": 3,
   "name": "Alba",
   "description": "Privacy-first AI impact estimator with prompt optimizer and daily footprint tracker.",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "homepage_url": "https://lindsaygross.github.io/Alba/",
   "permissions": ["storage"],
   "host_permissions": [
