@@ -103,36 +103,48 @@
 }
 
 .alba-optimizer-bar {
-  font-family: var(--alba-font);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
-  padding: 6px 10px;
-  margin-top: 6px;
-  background: var(--alba-sage);
-  border: 1px solid rgba(0, 0, 0, 0.08);
-  border-radius: 12px;
+  font-family: var(--alba-font) !important;
+  display: flex !important;
+  justify-content: space-between !important;
+  align-items: center !important;
+  gap: 12px !important;
+  padding: 6px 10px !important;
+  margin-top: 6px !important;
+  background: var(--alba-sage) !important;
+  border: 1px solid rgba(0, 0, 0, 0.08) !important;
+  border-radius: 12px !important;
   backdrop-filter: blur(8px);
-  font-size: 12px;
-  color: #fff;
-  min-height: 32px;
-  position: relative;
-  z-index: 1000;
-  box-sizing: border-box;
-  flex-shrink: 0;
-  width: 100%;
+  font-size: 12px !important;
+  color: #fff !important;
+  min-height: 32px !important;
+  height: auto !important;
+  position: relative !important;
+  z-index: 1000 !important;
+  box-sizing: border-box !important;
+  flex-shrink: 0 !important;
+  width: 100% !important;
+  overflow: visible !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 .alba-optimizer-action {
-  border: none;
-  border-radius: 999px;
-  padding: 4px 14px;
-  background: var(--alba-charcoal);
-  color: #fff;
-  font-size: 12px;
-  cursor: pointer;
+  border: none !important;
+  border-radius: 999px !important;
+  padding: 4px 14px !important;
+  background: var(--alba-charcoal) !important;
+  color: #fff !important;
+  font-size: 12px !important;
+  cursor: pointer !important;
   transition: background 120ms ease, transform 120ms ease;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  position: relative !important;
+  z-index: 1001 !important;
+  flex-shrink: 0 !important;
+  white-space: nowrap !important;
 }
 
 .alba-optimizer-action:disabled {
@@ -411,24 +423,38 @@
 }
 
 .alba-optimizer-preview {
-  font-weight: 500;
+  font-weight: 500 !important;
+  flex: 1 !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+  min-width: 0 !important;
+  font-size: 12px !important;
+  color: #fff !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 /* Inline suggestion styles (Grammarly-like) */
 .alba-inline-suggestion {
-  font-family: var(--alba-font);
-  background: linear-gradient(135deg, rgba(106, 164, 132, 0.08) 0%, rgba(106, 164, 132, 0.12) 100%);
-  border: 1px solid var(--alba-sage);
-  border-radius: 14px;
-  padding: 12px;
-  margin-top: 8px;
-  margin-bottom: 8px;
-  box-shadow: 0 2px 8px rgba(106, 164, 132, 0.15);
+  font-family: var(--alba-font) !important;
+  background: linear-gradient(135deg, rgba(106, 164, 132, 0.08) 0%, rgba(106, 164, 132, 0.12) 100%) !important;
+  border: 1px solid var(--alba-sage) !important;
+  border-radius: 14px !important;
+  padding: 12px !important;
+  margin-top: 8px !important;
+  margin-bottom: 8px !important;
+  box-shadow: 0 2px 8px rgba(106, 164, 132, 0.15) !important;
   animation: alba-slide-in 0.3s ease-out;
-  position: relative;
-  z-index: 1000;
-  width: 100%;
-  box-sizing: border-box;
+  position: relative !important;
+  z-index: 1002 !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+  display: block !important;
+  overflow: visible !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
 }
 
 @keyframes alba-slide-in {
@@ -498,14 +524,17 @@
 }
 
 .alba-suggestion-btn {
-  border: 1px solid var(--alba-border);
-  border-radius: 999px;
-  padding: 6px 16px;
-  font-size: 12px;
-  font-weight: 500;
-  cursor: pointer;
+  border: 1px solid var(--alba-border) !important;
+  border-radius: 999px !important;
+  padding: 6px 16px !important;
+  font-size: 12px !important;
+  font-weight: 500 !important;
+  cursor: pointer !important;
   transition: all 150ms ease;
-  font-family: var(--alba-font);
+  font-family: var(--alba-font) !important;
+  pointer-events: auto !important;
+  opacity: 1 !important;
+  visibility: visible !important;
 }
 
 .alba-suggestion-dismiss {

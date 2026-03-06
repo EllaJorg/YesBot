@@ -259,10 +259,12 @@
       document.querySelectorAll(selector).forEach((input) => {
         const resolved = resolveEditableTarget(input);
         if (!resolved || resolved.dataset.albaAttached) return;
-        // Prevent duplicate bars: skip if we already processed this element or its parent already has a bar
+        // Prevent duplicate bars: skip if we already processed this element or a bar already exists nearby
         if (seen.has(resolved)) return;
-        const parent = resolved.closest('form') || resolved.parentElement;
-        if (parent && parent.querySelector('.alba-optimizer-bar')) return;
+        const form = resolved.closest('form');
+        const parent = form || resolved.parentElement;
+        const container = parent?.parentElement || parent;
+        if (container && container.querySelector('.alba-optimizer-bar')) return;
         seen.add(resolved);
         resolved.dataset.albaAttached = 'true';
         createPromptController(resolved);
@@ -292,7 +294,9 @@
     controller.optimizeButton.type = 'button';
     controller.optimizeButton.textContent = 'Optimize';
     controller.optimizeButton.disabled = !state.settings.optimizerEnabled;
-    controller.optimizeButton.addEventListener('click', () => {
+    controller.optimizeButton.addEventListener('click', (event) => {
+      event.stopPropagation();
+      event.preventDefault();
       if (!state.settings.optimizerEnabled) return;
       handleOptimizeClick(controller);
     });
@@ -300,13 +304,15 @@
     controller.container.appendChild(controller.previewText);
     controller.container.appendChild(controller.optimizeButton);
 
-    const parent = editableTarget.closest('form') || editableTarget.parentElement;
+    const form = editableTarget.closest('form');
+    const parent = form || editableTarget.parentElement;
     const target = parent || editableTarget;
-    // Ensure the parent doesn't clip the optimizer bar
-    if (target.style && getComputedStyle(target).overflow === 'hidden') {
-      target.style.overflow = 'visible';
+    // Insert after the form/parent so the bar isn't clipped by overflow:hidden
+    if (target.parentElement) {
+      target.parentElement.insertBefore(controller.container, target.nextSibling);
+    } else {
+      target.appendChild(controller.container);
     }
-    target.appendChild(controller.container);
 
     const listener = () => {
       schedulePreviewUpdate(controller);
@@ -454,13 +460,19 @@
     dismissBtn.className = 'alba-suggestion-btn alba-suggestion-dismiss';
     dismissBtn.textContent = 'Dismiss';
     dismissBtn.type = 'button';
-    dismissBtn.addEventListener('click', () => hideInlineSuggestion(controller));
+    dismissBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
+      hideInlineSuggestion(controller);
+    });
 
     const acceptBtn = document.createElement('button');
     acceptBtn.className = 'alba-suggestion-btn alba-suggestion-accept';
     acceptBtn.textContent = 'Accept';
     acceptBtn.type = 'button';
-    acceptBtn.addEventListener('click', () => {
+    acceptBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
       setInputText(controller.input, optimizedText);
       controller.input.dispatchEvent(new Event('input', { bubbles: true }));
       hideInlineSuggestion(controller);
@@ -475,12 +487,9 @@
     suggestion.appendChild(impacts);
     suggestion.appendChild(actions);
 
-    // Insert suggestion near the input
-    const parent = controller.container.parentElement;
-    if (parent) {
-      parent.insertBefore(suggestion, controller.container);
-      controller.inlineSuggestion = suggestion;
-    }
+    // Insert suggestion right after the optimizer bar
+    controller.container.insertAdjacentElement('afterend', suggestion);
+    controller.inlineSuggestion = suggestion;
   }
 
   function hideInlineSuggestion(controller) {
@@ -1138,8 +1147,13 @@
 
   function setInputText(input, text) {
     if (!input) return;
-    if (input.value !== undefined) {
+    if (input.tagName === 'TEXTAREA' || input.tagName === 'INPUT') {
       input.value = text;
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+    } else if (input.getAttribute('contenteditable') === 'true') {
+      // For contenteditable divs (ChatGPT, Gemini, etc.)
+      input.textContent = text;
+      input.dispatchEvent(new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' }));
     } else {
       input.textContent = text;
     }
