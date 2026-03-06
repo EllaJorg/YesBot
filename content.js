@@ -43,17 +43,30 @@
     {
       id: 'gemini',
       hostPattern: /gemini\.google\.com$/,
-      promptSelectors: ['textarea', 'div[contenteditable="true"]'],
+      promptSelectors: [
+        'div[contenteditable="true"][role="textbox"]',
+        'div[contenteditable="true"][aria-label*="prompt"]',
+        'textarea[aria-label*="prompt"]',
+        'rich-textarea div[contenteditable="true"]',
+        'textarea'
+      ],
       sendButtonSelectors: ['button[aria-label*="Send"]'],
       assistantSelectors: [
         'chat-message[message-type="model"]',
-        'div[data-message-author-role="model"]'
+        'div[data-message-author-role="model"]',
+        'message-content[data-message-type="model"]'
       ]
     },
     {
       id: 'perplexity',
       hostPattern: /(?:www\.)?perplexity\.ai$/,
-      promptSelectors: ['textarea', 'div[contenteditable="true"]'],
+      promptSelectors: [
+        'textarea[placeholder*="Ask"]',
+        'textarea[placeholder*="follow"]',
+        'textarea[placeholder*="search"]',
+        'div[contenteditable="true"][role="textbox"]',
+        'textarea'
+      ],
       sendButtonSelectors: ['button[aria-label*="Submit"]', 'button[aria-label*="Send"]'],
       assistantSelectors: [
         'div[class*="answer"]',
@@ -241,10 +254,16 @@
 
   function attachAnalyzerToExistingPrompts() {
     cleanupDetachedControllers();
+    const seen = new Set();
     state.site.promptSelectors.forEach((selector) => {
       document.querySelectorAll(selector).forEach((input) => {
         const resolved = resolveEditableTarget(input);
         if (!resolved || resolved.dataset.albaAttached) return;
+        // Prevent duplicate bars: skip if we already processed this element or its parent already has a bar
+        if (seen.has(resolved)) return;
+        const parent = resolved.closest('form') || resolved.parentElement;
+        if (parent && parent.querySelector('.alba-optimizer-bar')) return;
+        seen.add(resolved);
         resolved.dataset.albaAttached = 'true';
         createPromptController(resolved);
       });
@@ -267,7 +286,7 @@
     controller.container.className = 'alba-optimizer-bar';
     applyTheme(controller.container);
     controller.previewText.className = 'alba-optimizer-preview';
-    //controller.previewText.textContent = 'Alba';
+    controller.previewText.textContent = 'Alba';
 
     controller.optimizeButton.className = 'alba-optimizer-action';
     controller.optimizeButton.type = 'button';
@@ -282,7 +301,12 @@
     controller.container.appendChild(controller.optimizeButton);
 
     const parent = editableTarget.closest('form') || editableTarget.parentElement;
-    (parent || editableTarget).appendChild(controller.container);
+    const target = parent || editableTarget;
+    // Ensure the parent doesn't clip the optimizer bar
+    if (target.style && getComputedStyle(target).overflow === 'hidden') {
+      target.style.overflow = 'visible';
+    }
+    target.appendChild(controller.container);
 
     const listener = () => {
       schedulePreviewUpdate(controller);
@@ -330,7 +354,7 @@
     }, 2000); // Wait 2 seconds after user stops typing
   }
 
-  async function fetchAndShowInlineSuggestion(controller) {
+  async function fetchAndShowInlineSuggestion(controller, force) {
     const text = getInputText(controller.input) || '';
 
     if (!text.trim() || text.length < ALBA_CONFIG.minChars) {
@@ -338,8 +362,8 @@
       return;
     }
 
-    // Don't refetch if text hasn't changed
-    if (controller.lastOptimizedText === text) {
+    // Don't refetch if text hasn't changed (unless forced by button click)
+    if (!force && controller.lastOptimizedText === text) {
       return;
     }
 
@@ -347,10 +371,12 @@
 
     // Try local optimization first
     const localOptimized = applyLocalOptimizer(text);
+    let shown = false;
 
     // If local optimization made changes, show it immediately
     if (localOptimized !== text && localOptimized.length < text.length) {
       showInlineSuggestion(controller, localOptimized, 'local');
+      shown = true;
     }
 
     // If remote optimizer is enabled, fetch remote suggestion
@@ -358,7 +384,13 @@
       const remoteOptimized = await fetchRemoteOptimization(text);
       if (remoteOptimized && remoteOptimized.trim() && remoteOptimized !== text) {
         showInlineSuggestion(controller, remoteOptimized.trim(), 'remote');
+        shown = true;
       }
+    }
+
+    // If forced (user clicked Optimize) and nothing was shown, show local result anyway
+    if (force && !shown) {
+      showInlineSuggestion(controller, localOptimized, 'local');
     }
   }
 
@@ -492,16 +524,29 @@
     const original = getInputText(controller.input) || '';
     if (!original.trim()) return;
     controller.lastOptimizedText = null;
-    fetchAndShowInlineSuggestion(controller);
+    fetchAndShowInlineSuggestion(controller, true);
   }
 
 
   function applyLocalOptimizer(text) {
-    const trimmed = text
+    let trimmed = text
       .replace(/\s+/g, ' ')
-      .replace(/\b(please|kindly|just|maybe|perhaps)\b/gi, '')
-      .replace(/\b(can you|could you|would you)\b/gi, '')
+      // Strip politeness and filler words
+      .replace(/\b(please|kindly|just|maybe|perhaps|actually|basically|really|very|simply)\b/gi, '')
+      // Strip meta-requests and indirect phrasing
+      .replace(/\b(can you|could you|would you|will you|i want to|i need to|i'd like to|i would like to|help me|i want you to|i need you to)\b/gi, '')
+      // Strip conversational openers
+      .replace(/\b(hey|hi|hello|thanks|thank you|sorry)\b/gi, '')
+      // Strip unnecessary question framing
+      .replace(/\b(do you know|tell me|let me know|i'm wondering|i was wondering)\b/gi, '')
+      // Clean up resulting double spaces and leading/trailing punctuation
+      .replace(/\s+/g, ' ')
+      .replace(/^\s*[,?.!]+\s*/, '')
       .trim();
+    // Capitalize first letter if needed
+    if (trimmed.length > 0) {
+      trimmed = trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
+    }
     return trimmed.length > 0 ? trimmed : text.trim();
   }
 
