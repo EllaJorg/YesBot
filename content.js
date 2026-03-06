@@ -332,7 +332,6 @@
 
   async function fetchAndShowInlineSuggestion(controller) {
     const text = getInputText(controller.input) || '';
-    console.log('[Alba] Checking for optimization. Text length:', text.length, 'Min chars:', ALBA_CONFIG.minChars);
 
     if (!text.trim() || text.length < ALBA_CONFIG.minChars) {
       hideInlineSuggestion(controller);
@@ -341,34 +340,25 @@
 
     // Don't refetch if text hasn't changed
     if (controller.lastOptimizedText === text) {
-      console.log('[Alba] Text unchanged, skipping optimization');
       return;
     }
 
     controller.lastOptimizedText = text;
-    console.log('[Alba] Optimizing text:', text.substring(0, 50) + '...');
 
     // Try local optimization first
     const localOptimized = applyLocalOptimizer(text);
-    console.log('[Alba] Local optimization result:', localOptimized.substring(0, 50) + '...');
 
     // If local optimization made changes, show it immediately
     if (localOptimized !== text && localOptimized.length < text.length) {
-      console.log('[Alba] Showing local optimization suggestion');
       showInlineSuggestion(controller, localOptimized, 'local');
     }
 
     // If remote optimizer is enabled, fetch remote suggestion
     if (state.settings.remoteOptimizer) {
-      console.log('[Alba] Fetching remote optimization...');
       const remoteOptimized = await fetchRemoteOptimization(text);
-      console.log('[Alba] Remote optimization result:', remoteOptimized);
       if (remoteOptimized && remoteOptimized.trim() && remoteOptimized !== text) {
-        console.log('[Alba] Showing remote optimization suggestion');
         showInlineSuggestion(controller, remoteOptimized.trim(), 'remote');
       }
-    } else {
-      console.log('[Alba] Remote optimizer disabled in settings');
     }
   }
 
@@ -549,14 +539,11 @@
   function processAssistantMessage(element) {
     if (!element || element.dataset.albaLabeled) return;
     const text = element.innerText || '';
-    console.log("Text trim length : ", text.trim().length);
-    console.log("ALBA_CONFIG.minChars : ", ALBA_CONFIG.minChars);
-    // if (text.trim().length < ALBA_CONFIG.minChars) {
-    //   element.dataset.albaLabeled = 'skip';
-    //   return;
-    // }
+    if (text.trim().length < ALBA_CONFIG.minChars) {
+      element.dataset.albaLabeled = 'skip';
+      return;
+    }
     const images = countContentImages(element);
-    console.log("Images : ", images);
     const modality = images > 0 ? 'image' : detectModality(text);
     const estimate = estimateImpact({ text, modality, images });
     if (!estimate || !estimate.Wh) {
@@ -565,7 +552,6 @@
     }
     element.dataset.albaLabeled = 'true';
     renderImpactLabel(element, estimate);
-    console.log("Element wh:", element.Wh);
     persistImpact('assistant_response', estimate, text, modality);
   }
 
@@ -927,29 +913,36 @@
     const cards = sourceCards.slice(0, 3).map((card, idx) => {
       return `
         <article class="alba-wrapped-card" style="--alba-wrapped-gradient:${getWrappedGradient(idx)}">
-          <p class="alba-wrapped-card-title">${card.title || 'Highlight'}</p>
+          <p class="alba-wrapped-card-title">${sanitizeText(card.title) || 'Highlight'}</p>
           <p class="alba-wrapped-card-stat">
-            <span class="alba-wrapped-card-value">${card.statValue || ''}</span>
-            <span class="alba-wrapped-card-label">${card.statLabel || ''}</span>
+            <span class="alba-wrapped-card-value">${sanitizeText(card.statValue)}</span>
+            <span class="alba-wrapped-card-label">${sanitizeText(card.statLabel)}</span>
           </p>
-          <p class="alba-wrapped-card-analogy">${card.analogy || ''}</p>
-          <p class="alba-wrapped-card-tip">${card.tip || ''}</p>
+          <p class="alba-wrapped-card-analogy">${sanitizeText(card.analogy)}</p>
+          <p class="alba-wrapped-card-tip">${sanitizeText(card.tip)}</p>
         </article>`;
     }).join('');
 
     panel.content.innerHTML = `
       <header class="alba-wrapped-head">
-        <p class="alba-wrapped-title">${payload.headline || 'Alba Eco Wrapped'}</p>
-        <p class="alba-wrapped-subhead">${payload.subhead || dateLabel}</p>
+        <p class="alba-wrapped-title">${sanitizeText(payload.headline) || 'Alba Eco Wrapped'}</p>
+        <p class="alba-wrapped-subhead">${sanitizeText(payload.subhead) || sanitizeText(dateLabel)}</p>
         <p class="alba-wrapped-tagline">${formatWrappedMetrics(totals)}</p>
       </header>
       <section class="alba-wrapped-grid">
         ${cards}
       </section>
       <footer class="alba-wrapped-footer">
-        <p>${payload.cta || ''}</p>
-        <span>${payload.footnote || 'Estimates rely on Alba defaults only.'}</span>
+        <p>${sanitizeText(payload.cta)}</p>
+        <span>${sanitizeText(payload.footnote) || 'Estimates rely on Alba defaults only.'}</span>
       </footer>`;
+  }
+
+  function sanitizeText(str) {
+    if (!str) return '';
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
   }
 
   function getWrappedGradient(index) {
@@ -1227,11 +1220,11 @@
   
 
   function formatComparison(Wh) {
-  if (!Wh || Wh <= 0) return 'No impact recorded yet today.';
-  const baseline = ALBA_CONFIG.baselineComparisons && ALBA_CONFIG.baselineComparisons[0];
-  if (!baseline || !baseline.factorWh) return 'Comparable impact unavailable.';
-  const value = (Wh / baseline.factorWh).toFixed(1);
-  return `${baseline.label} for ${value} minutes`;
+    if (!Wh || Wh <= 0) return 'No impact recorded yet today.';
+    const baseline = ALBA_CONFIG.baselineComparisons && ALBA_CONFIG.baselineComparisons[0];
+    if (!baseline || !baseline.factorWh) return 'Comparable impact unavailable.';
+    const value = (Wh / baseline.factorWh).toFixed(1);
+    return `${baseline.label} for ${value} minutes`;
   }
 
   function formatTotalsTooltip(totals) {
@@ -1489,8 +1482,13 @@
       }
 
       // Fallback if AI client not loaded
-      console.warn('[Alba] AI client not available, using local fallback');
-      return buildLocalWrappedCards(totals);
+      return {
+        headline: 'Alba Eco Wrapped',
+        subhead: dateLabel,
+        cards: buildLocalWrappedCards(totals),
+        cta: 'Reuse context, embrace optimizer tips, and bank even more savings tomorrow.',
+        footnote: 'Estimates rely on Alba defaults only.'
+      };
     } catch (err) {
       if (err.name === 'AbortError') {
         return null;

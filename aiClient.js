@@ -11,6 +11,19 @@ const GITHUB_TOKEN = '__GITHUB_TOKEN__';
 const GITHUB_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
 const MODEL_ID = 'gpt-4o-mini';
 
+// Simple rate limiter: max calls per minute
+const RATE_LIMIT = { maxPerMinute: 10, calls: [], blocked: false };
+
+function checkRateLimit() {
+  const now = Date.now();
+  RATE_LIMIT.calls = RATE_LIMIT.calls.filter(t => now - t < 60000);
+  if (RATE_LIMIT.calls.length >= RATE_LIMIT.maxPerMinute) {
+    return false;
+  }
+  RATE_LIMIT.calls.push(now);
+  return true;
+}
+
 const OPTIMIZER_SYSTEM = `You are an expert prompt engineer. You compress prompts to use minimum tokens. Keep EXACT same meaning but remove ALL unnecessary words.
 
 RULES:
@@ -69,6 +82,11 @@ function isConfigured() {
 async function callGitHubModels(systemPrompt, userMessage, options = {}) {
   if (!isConfigured()) {
     console.warn('[Alba] GitHub token not configured');
+    return null;
+  }
+
+  if (!checkRateLimit()) {
+    console.warn('[Alba] Rate limit exceeded, skipping API call');
     return null;
   }
 
