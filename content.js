@@ -133,13 +133,22 @@
     wrappedAbortController: null,
     wrappedEscHandler: null
   };
+  const checkedMessages = new Set();
 
   if (!state.site) {
     return;
   }
 
   init();
+  function getLastAssistantMessage() {
+  const msgs = document.querySelectorAll('[data-message-author-role="assistant"]');
+  return msgs.length ? msgs[msgs.length - 1].innerText : null;
+}
 
+function getLastUserMessage() {
+  const msgs = document.querySelectorAll('[data-message-author-role="user"]');
+  return msgs.length ? msgs[msgs.length - 1].innerText : null;
+}
   function init() {
     state.conversationId = getConversationId();
     startConversationTracking();
@@ -150,7 +159,49 @@
       }
     });
   }
+async function runSycophancyCheck(assistantEl) {
+  const userMsg = getLastUserMessage();
+  const aiMsg = assistantEl.innerText;
+  if (!userMsg || !aiMsg) return;
 
+  // Show a loading pill while we wait
+  const pill = document.createElement('div');
+  pill.className = 'alba-impact-label alba-tooltip-host';
+  pill.textContent = '🔍 Checking...';
+  assistantEl.appendChild(pill);
+
+  const result = await ALBA_AI_CLIENT.judgeSycophancy(userMsg, aiMsg);
+  if (!result) {
+    pill.textContent = '⚠️ Score unavailable';
+    return;
+  }
+
+  const emoji = result.label === 'low' ? '🟢' : result.label === 'medium' ? '🟡' : '🔴';
+  pill.textContent = `${emoji} ${result.label} sycophancy`;
+
+  // Show reason on click
+  pill.style.cursor = 'pointer';
+  pill.addEventListener('click', () => {
+    const existing = pill.querySelector('.alba-tooltip');
+    if (existing) {
+      existing.remove();
+    } else {
+      const tooltip = document.createElement('div');
+tooltip.className = 'alba-tooltip';
+tooltip.style.whiteSpace = 'normal';
+tooltip.style.maxWidth = '300px';
+tooltip.style.background = '#1a1a1a';
+tooltip.style.color = '#ffffff';
+tooltip.style.padding = '8px 12px';
+tooltip.style.borderRadius = '8px';
+tooltip.style.zIndex = '99999';
+tooltip.textContent = `Score: ${result.score} — ${result.reason}`;
+pill.appendChild(tooltip);
+    }
+  });
+
+  console.log("SYCOPHANCY SCORE:", result);
+}
   function startFeatures() {
     if (state.featuresActive) return;
     state.featuresActive = true;
@@ -560,6 +611,7 @@
   }
 
   function setupAssistantObserver() {
+    
     labelExistingAssistantMessages();
     state.assistantObserver = new MutationObserver((mutations) => {
       mutations.forEach((mutation) => {
@@ -591,12 +643,18 @@
   }
 
   function processAssistantMessage(element) {
-    if (!element || element.dataset.albaLabeled) return;
+    if (!element || element.dataset.albaLabeled) return;  // keep this one
     const text = element.innerText || '';
     if (text.trim().length < ALBA_CONFIG.minChars) {
       element.dataset.albaLabeled = 'skip';
       return;
     }
+    // ✅ Add your block HERE - text is confirmed non-empty at this point
+    if (!checkedMessages.has(element)) {
+      checkedMessages.add(element);
+      runSycophancyCheck(element);
+    }
+    // rest of the original function continues below...
     const images = countContentImages(element);
     const modality = images > 0 ? 'image' : detectModality(text);
     const estimate = estimateImpact({ text, modality, images });
@@ -610,17 +668,7 @@
   }
 
   function renderImpactLabel(element, estimate) {
-    const pill = document.createElement('div');
-    pill.className = 'alba-impact-label alba-tooltip-host';
-    applyTheme(pill);
-    pill.textContent = `${estimate.icon || 'eco'} ${estimate.Wh.toFixed(2)} Wh | ${estimate.gCO2.toFixed(2)} g CO2 | ${estimate.waterMl.toFixed(0)} mL`;
-
-    const tooltip = document.createElement('div');
-    tooltip.className = 'alba-tooltip';
-    tooltip.textContent = 'Estimated locally from message size + public benchmarks. Actual values vary.';
-    pill.appendChild(tooltip);
-
-    element.appendChild(pill);
+  // intentionally empty - replaced by sycophancy label
   }
 
   function persistImpact(source, estimate, text, modality) {
@@ -653,96 +701,13 @@
     renderWidgetTotals();
   }
 
-  function createFloatingWidget() {
-    const widget = document.createElement('div');
-    widget.className = 'alba-widget';
-    applyTheme(widget);
-
-    const toggle = document.createElement('button');
-    toggle.className = 'alba-widget-toggle';
-    toggle.type = 'button';
-
-    const logo = document.createElement('img');
-    logo.src = chrome.runtime.getURL('icons/alba_logo.png');
-    logo.alt = 'Company logo';
-    logo.className = 'alba-widget-logo';
-
-    toggle.appendChild(logo);
-
-    const card = document.createElement('div');
-    card.className = 'alba-widget-card';
-
-    const tabs = document.createElement('div');
-    tabs.className = 'alba-widget-tabs';
-
-    const todayTab = document.createElement('button');
-    todayTab.type = 'button';
-    todayTab.className = 'alba-widget-tab';
-    todayTab.dataset.tab = 'today';
-    todayTab.textContent = "Today's Impact";
-
-    const chatTab = document.createElement('button');
-    chatTab.type = 'button';
-    chatTab.className = 'alba-widget-tab';
-    chatTab.dataset.tab = 'chat';
-    chatTab.textContent = 'This Chat';
-
-    tabs.appendChild(todayTab);
-    tabs.appendChild(chatTab);
-
-    const totals = document.createElement('div');
-    totals.className = 'alba-widget-totals';
-
-    const comparison = document.createElement('div');
-    comparison.className = 'alba-widget-comparison';
-
-    const delta = document.createElement('div');
-    delta.className = 'alba-widget-delta';
-
-    const buttons = document.createElement('div');
-    buttons.className = 'alba-widget-actions';
-
-    const exportBtn = document.createElement('button');
-    exportBtn.textContent = 'Export';
-    exportBtn.type = 'button';
-    exportBtn.addEventListener('click', exportHistory);
-
-    const resetBtn = document.createElement('button');
-    resetBtn.textContent = 'Reset';
-    resetBtn.type = 'button';
-    resetBtn.addEventListener('click', resetTodayTotals);
-
-    buttons.appendChild(exportBtn);
-    buttons.appendChild(resetBtn);
-
-    card.appendChild(tabs);
-    card.appendChild(totals);
-    card.appendChild(comparison);
-    card.appendChild(delta);
-    card.appendChild(buttons);
-
-    widget.appendChild(toggle);
-    widget.appendChild(card);
-
-    toggle.addEventListener('click', () => {
-      widget.classList.toggle('alba-open');
-    });
-
-    document.body.appendChild(widget);
-    const previousTab = state.widget?.activeTab || 'today';
-    state.widget = {
-      root: widget,
-      totalsEl: totals,
-      comparisonEl: comparison,
-      deltaEl: delta,
-      tabs: { container: tabs, today: todayTab, chat: chatTab },
-      activeTab: previousTab
-    };
-
-    todayTab.addEventListener('click', () => setWidgetTab('today'));
-    chatTab.addEventListener('click', () => setWidgetTab('chat'));
-
-    setWidgetTab(previousTab);
+  function startFeatures() {
+    if (state.featuresActive) return;
+    state.featuresActive = true;
+    ensureDailyTotalsKey(getTodayKey());
+    setupPromptAnalyzer();
+    setupAssistantObserver();
+    createFloatingWidget();  // <-- delete this line
   }
 
   function setWidgetTab(tab) {
