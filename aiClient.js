@@ -8,7 +8,7 @@
 // Placeholder replaced at build time - DO NOT COMMIT ACTUAL TOKEN
 const GITHUB_TOKEN = '__GITHUB_TOKEN__';
 
-const GITHUB_MODELS_URL = 'https://models.inference.ai.azure.com/chat/completions';
+const GITHUB_MODELS_URL = 'https://api.openai.com/v1/chat/completions';
 const MODEL_ID = 'gpt-4o-mini';
 
 // Simple rate limiter: max calls per minute
