@@ -1,12 +1,11 @@
 {
   "manifest_version": 3,
-  "name": "Alba",
-  "description": "Privacy-first AI impact estimator with prompt optimizer and daily footprint tracker.",
-  "version": "1.2.0",
-  "homepage_url": "https://lindsaygross.github.io/Alba/",
+  "name": "Yesbot",
+  "description": "Detects sycophancy in AI chat responses and displays a score with explanation.",
+  "version": "1.0.0",
   "permissions": ["storage"],
   "host_permissions": [
-    "https://models.inference.ai.azure.com/*"
+    "https://api.openai.com/*"
   ],
   "icons": {
     "16": "icons/icon16.png",
@@ -33,12 +32,6 @@
       "css": ["styles.css"],
       "js": ["energyConfig.js", "aiClient.js", "content.js"],
       "run_at": "document_idle"
-    }
-  ],
-  "web_accessible_resources": [
-    {
-      "resources": ["icons/alba_logo.png"],
-      "matches": ["<all_urls>"]
     }
   ]
 }

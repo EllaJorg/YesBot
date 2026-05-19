@@ -1,6 +1,6 @@
 (() => {
-  if (!globalThis.ALBA_CONFIG || !globalThis.ALBA_STORAGE_KEYS) {
-    console.warn('alba: missing configuration');
+  if (!globalThis.SYC_CONFIG || !globalThis.SYC_STORAGE_KEYS) {
+    console.warn('yesbot: missing configuration');
     return;
   }
 
@@ -76,7 +76,7 @@
   ];
 
   const state = {
-    settings: { ...ALBA_CONFIG.defaultSettings },
+    settings: { ...SYC_CONFIG.defaultSettings },
     assistantObserver: null,
     site: SITE_CONFIGS.find((config) => config.hostPattern.test(window.location.hostname)),
     featuresActive: false,
@@ -114,11 +114,11 @@
     if (!userMsg || !aiMsg) return;
 
     const pill = document.createElement('div');
-    pill.className = 'alba-impact-label alba-tooltip-host';
+    pill.className = 'syc-score-pill syc-tooltip-host';
     pill.textContent = '🔍 Checking...';
     assistantEl.appendChild(pill);
 
-    const result = await ALBA_AI_CLIENT.judgeSycophancy(userMsg, aiMsg);
+    const result = await SYC_AI_CLIENT.judgeSycophancy(userMsg, aiMsg);
     if (!result) {
       pill.textContent = '⚠️ Score unavailable';
       return;
@@ -129,12 +129,12 @@
 
     pill.style.cursor = 'pointer';
     pill.addEventListener('click', () => {
-      const existing = pill.querySelector('.alba-tooltip');
+      const existing = pill.querySelector('.syc-tooltip');
       if (existing) {
         existing.remove();
       } else {
         const tooltip = document.createElement('div');
-        tooltip.className = 'alba-tooltip';
+        tooltip.className = 'syc-tooltip';
         tooltip.style.whiteSpace = 'normal';
         tooltip.style.maxWidth = '300px';
         tooltip.style.background = '#1a1a1a';
@@ -147,7 +147,7 @@
       }
     });
 
-    console.log("SYCOPHANCY SCORE:", result);
+    console.log('[Yesbot] score:', result);
   }
 
   function startFeatures() {
@@ -161,16 +161,16 @@
     state.featuresActive = false;
     state.assistantObserver?.disconnect();
     state.assistantObserver = null;
-    document.querySelectorAll('.alba-impact-label').forEach((node) => node.remove());
+    document.querySelectorAll('.syc-score-pill').forEach((node) => node.remove());
   }
 
   function loadPersistedState() {
     return new Promise((resolve) => {
       chrome.storage.sync.get(
-        [ALBA_STORAGE_KEYS.settings],
+        [SYC_STORAGE_KEYS.settings],
         (data) => {
-          if (data[ALBA_STORAGE_KEYS.settings]) {
-            state.settings = { ...ALBA_CONFIG.defaultSettings, ...data[ALBA_STORAGE_KEYS.settings] };
+          if (data[SYC_STORAGE_KEYS.settings]) {
+            state.settings = { ...SYC_CONFIG.defaultSettings, ...data[SYC_STORAGE_KEYS.settings] };
           }
           refreshThemeTokens();
           resolve();
@@ -181,12 +181,12 @@
 
   function handleStorageChange(changes, area) {
     if (area !== 'sync') return;
-    if (changes[ALBA_STORAGE_KEYS.settings]) {
+    if (changes[SYC_STORAGE_KEYS.settings]) {
       const prevEnabled = state.settings.enabled;
       const prevTheme = state.settings.theme;
       state.settings = {
-        ...ALBA_CONFIG.defaultSettings,
-        ...changes[ALBA_STORAGE_KEYS.settings].newValue
+        ...SYC_CONFIG.defaultSettings,
+        ...changes[SYC_STORAGE_KEYS.settings].newValue
       };
       if (state.settings.theme !== prevTheme) {
         refreshThemeTokens();
@@ -230,21 +230,21 @@
     if (!state.site.assistantSelectors.some((selector) => node.matches(selector))) {
       return;
     }
-    setTimeout(() => processAssistantMessage(node), ALBA_CONFIG.responseDelayMs);
+    setTimeout(() => processAssistantMessage(node), SYC_CONFIG.responseDelayMs);
   }
 
   function processAssistantMessage(element) {
-    if (!element || element.dataset.albaLabeled) return;
+    if (!element || element.dataset.sycLabeled) return;
     const text = element.innerText || '';
-    if (text.trim().length < ALBA_CONFIG.minChars) {
-      element.dataset.albaLabeled = 'skip';
+    if (text.trim().length < SYC_CONFIG.minChars) {
+      element.dataset.sycLabeled = 'skip';
       return;
     }
     if (!checkedMessages.has(element)) {
       checkedMessages.add(element);
       runSycophancyCheck(element);
     }
-    element.dataset.albaLabeled = 'true';
+    element.dataset.sycLabeled = 'true';
   }
 
   function startConversationTracking() {
@@ -259,13 +259,13 @@
 
     const patchHistoryMethod = (method) => {
       const original = history[method];
-      if (typeof original !== 'function' || original.__albaWrapped) return;
+      if (typeof original !== 'function' || original.__sycWrapped) return;
       const wrapped = function (...args) {
         const result = original.apply(this, args);
         setTimeout(handleChange, 0);
         return result;
       };
-      wrapped.__albaWrapped = true;
+      wrapped.__sycWrapped = true;
       history[method] = wrapped;
     };
 
@@ -292,7 +292,7 @@
 
   function getActiveThemeKey() {
     const theme = state.settings?.theme;
-    if (ALBA_CONFIG.themes && theme && ALBA_CONFIG.themes[theme]) {
+    if (SYC_CONFIG.themes && theme && SYC_CONFIG.themes[theme]) {
       return theme;
     }
     return 'light';
@@ -300,51 +300,9 @@
 
   function refreshThemeTokens() {
     const themeKey = getActiveThemeKey();
-    document.querySelectorAll('.alba-theme').forEach((node) => {
-      node.dataset.albaTheme = themeKey;
+    document.querySelectorAll('.syc-theme').forEach((node) => {
+      node.dataset.sycTheme = themeKey;
     });
-  }
-
-  function getTodayKey() {
-    return new Date().toISOString().slice(0, 10);
-  }
-
-  function resolveEditableTarget(element) {
-    if (!element) return null;
-    if (isUsableEditable(element)) return element;
-    const scopes = [element, element.closest?.('[contenteditable="true"], [role="textbox"], textarea'), element.parentElement].filter(Boolean);
-    const selectorOrder = [
-      '[contenteditable="true"][role="textbox"]',
-      '[contenteditable="true"][data-placeholder]',
-      '[contenteditable="true"]',
-      '[role="textbox"]',
-      'textarea'
-    ];
-    for (const scope of scopes) {
-      for (const selector of selectorOrder) {
-        const candidate =
-          scope.matches?.(selector) ? scope : scope.querySelector?.(selector) || scope.parentElement?.querySelector?.(selector);
-        if (candidate && isUsableEditable(candidate)) {
-          return candidate;
-        }
-      }
-    }
-    return null;
-  }
-
-  function isUsableEditable(element) {
-    if (!element || !element.matches) return false;
-    if (!element.matches('textarea, [contenteditable="true"], [role="textbox"]')) return false;
-    if (element.getAttribute('aria-hidden') === 'true') return false;
-    if (element.closest('[aria-hidden="true"]')) return false;
-    const style = window.getComputedStyle(element);
-    if (!style || style.display === 'none' || style.visibility === 'hidden') return false;
-    const rect = element.getBoundingClientRect();
-    return rect.width > 0 && rect.height > 0;
-  }
-
-  function clamp(value, min, max) {
-    return Math.min(max, Math.max(min, value));
   }
 
 })();

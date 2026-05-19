@@ -1,57 +1,52 @@
-.alba-theme {
-  --alba-sage: #6aa484;
-  --alba-sage-dark: #4f866b;
-  --alba-charcoal: #1f2b27;
-  --alba-text: #1f2b27;
-  --alba-text-muted: #5a6a63;
-  --alba-cream: rgba(252, 252, 250, 0.92);
-  --alba-border: rgba(31, 43, 39, 0.12);
-  --alba-shadow: 0 8px 24px rgba(19, 26, 23, 0.15);
-  --alba-font: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
-  --alba-surface: rgba(255, 255, 255, 0.85);
-  --alba-surface-muted: rgba(255, 255, 255, 0.65);
-  --alba-surface-soft: rgba(255, 255, 255, 0.7);
-  --alba-surface-strong: #ffffff;
-  --alba-pill-bg: rgba(255, 255, 255, 0.85);
-  --alba-control-bg: #ffffff;
+.syc-theme {
+  --syc-accent: #6aa484;
+  --syc-accent-dark: #4f866b;
+  --syc-charcoal: #1f2b27;
+  --syc-text: #1f2b27;
+  --syc-text-muted: #5a6a63;
+  --syc-cream: rgba(252, 252, 250, 0.92);
+  --syc-border: rgba(31, 43, 39, 0.12);
+  --syc-shadow: 0 8px 24px rgba(19, 26, 23, 0.15);
+  --syc-font: "Inter", "Segoe UI", -apple-system, BlinkMacSystemFont, sans-serif;
+  --syc-surface: rgba(255, 255, 255, 0.85);
+  --syc-surface-strong: #ffffff;
+  --syc-pill-bg: rgba(255, 255, 255, 0.85);
+  --syc-control-bg: #ffffff;
 }
 
-.alba-theme[data-alba-theme="dark"] {
-  --alba-sage: #8bd8b5;
-  --alba-sage-dark: #5ca284;
-  --alba-charcoal: #0f1a17;
-  --alba-text: #f3faf4;
-  --alba-text-muted: rgba(243, 250, 244, 0.75);
-  --alba-cream: rgba(18, 25, 22, 0.94);
-  --alba-border: rgba(232, 247, 240, 0.22);
-  --alba-shadow: 0 18px 32px rgba(0, 0, 0, 0.55);
-  --alba-surface: rgba(30, 42, 36, 0.92);
-  --alba-surface-muted: rgba(255, 255, 255, 0.07);
-  --alba-surface-soft: rgba(255, 255, 255, 0.12);
-  --alba-surface-strong: rgba(40, 55, 49, 0.98);
-  --alba-pill-bg: rgba(40, 55, 49, 0.9);
-  --alba-control-bg: rgba(40, 55, 49, 0.98);
+.syc-theme[data-syc-theme="dark"] {
+  --syc-accent: #8bd8b5;
+  --syc-accent-dark: #5ca284;
+  --syc-charcoal: #0f1a17;
+  --syc-text: #f3faf4;
+  --syc-text-muted: rgba(243, 250, 244, 0.75);
+  --syc-cream: rgba(18, 25, 22, 0.94);
+  --syc-border: rgba(232, 247, 240, 0.22);
+  --syc-shadow: 0 18px 32px rgba(0, 0, 0, 0.55);
+  --syc-surface: rgba(30, 42, 36, 0.92);
+  --syc-surface-strong: rgba(40, 55, 49, 0.98);
+  --syc-pill-bg: rgba(40, 55, 49, 0.9);
+  --syc-control-bg: rgba(40, 55, 49, 0.98);
 }
 
-.alba-theme[data-alba-theme="contrast"] {
-  --alba-sage: #1fbba6;
-  --alba-sage-dark: #0d6f62;
-  --alba-charcoal: #0e1f2c;
-  --alba-text: #0e1f2c;
-  --alba-text-muted: #14384d;
-  --alba-cream: #fdfbef;
-  --alba-border: rgba(14, 31, 44, 0.25);
-  --alba-shadow: 0 12px 28px rgba(20, 32, 41, 0.25);
-  --alba-surface: #ffffff;
-  --alba-surface-muted: #f1f5ff;
-  --alba-surface-soft: rgba(255, 255, 255, 0.95);
-  --alba-surface-strong: #ffffff;
-  --alba-pill-bg: #ffffff;
-  --alba-control-bg: #ffffff;
+.syc-theme[data-syc-theme="contrast"] {
+  --syc-accent: #1fbba6;
+  --syc-accent-dark: #0d6f62;
+  --syc-charcoal: #0e1f2c;
+  --syc-text: #0e1f2c;
+  --syc-text-muted: #14384d;
+  --syc-cream: #fdfbef;
+  --syc-border: rgba(14, 31, 44, 0.25);
+  --syc-shadow: 0 12px 28px rgba(20, 32, 41, 0.25);
+  --syc-surface: #ffffff;
+  --syc-surface-strong: #ffffff;
+  --syc-pill-bg: #ffffff;
+  --syc-control-bg: #ffffff;
 }
 
-.alba-impact-label {
-  font-family: var(--alba-font);
+/* Score pill injected below AI responses */
+.syc-score-pill {
+  font-family: var(--syc-font);
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -61,718 +56,46 @@
   margin-left: auto;
   align-self: flex-end;
   border-radius: 999px;
-  background: var(--alba-pill-bg);
+  background: var(--syc-pill-bg);
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
-  color: var(--alba-text);
+  color: var(--syc-text);
   font-size: 12px;
   cursor: default;
 }
 
-.alba-widget-totals:hover {
-  text-decoration: underline;
-}
-
-.alba-tooltip-host {
+.syc-tooltip-host {
   position: relative;
 }
 
-.alba-tooltip {
+.syc-tooltip {
   opacity: 0;
   visibility: hidden;
   position: absolute;
   bottom: 120%;
   right: 0;
   transform: translateY(6px);
-  background: var(--alba-cream);
+  background: var(--syc-cream);
   border-radius: 12px;
   padding: 8px 10px;
-  width: 220px;
-  box-shadow: var(--alba-shadow);
+  width: 260px;
+  box-shadow: var(--syc-shadow);
   transition: opacity 100ms ease, transform 100ms ease;
-  border: 1px solid var(--alba-border);
+  border: 1px solid var(--syc-border);
   font-size: 11px;
-  line-height: 1.3;
+  line-height: 1.4;
   z-index: 2147483647;
 }
 
-.alba-tooltip-host:hover .alba-tooltip,
-.alba-tooltip-host:focus-within .alba-tooltip {
+.syc-tooltip-host:hover .syc-tooltip,
+.syc-tooltip-host:focus-within .syc-tooltip {
   opacity: 1;
   visibility: visible;
   transform: translateY(0);
 }
 
-.alba-optimizer-bar {
-  font-family: var(--alba-font) !important;
-  display: flex !important;
-  justify-content: space-between !important;
-  align-items: center !important;
-  gap: 12px !important;
-  padding: 6px 10px !important;
-  margin-top: 6px !important;
-  background: var(--alba-sage) !important;
-  border: 1px solid rgba(0, 0, 0, 0.08) !important;
-  border-radius: 12px !important;
-  backdrop-filter: blur(8px);
-  font-size: 12px !important;
-  color: #fff !important;
-  min-height: 32px !important;
-  height: auto !important;
-  position: relative !important;
-  z-index: 1000 !important;
-  box-sizing: border-box !important;
-  flex-shrink: 0 !important;
-  width: 100% !important;
-  overflow: visible !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
-
-.alba-optimizer-action {
-  border: none !important;
-  border-radius: 999px !important;
-  padding: 4px 14px !important;
-  background: var(--alba-charcoal) !important;
-  color: #fff !important;
-  font-size: 12px !important;
-  cursor: pointer !important;
-  transition: background 120ms ease, transform 120ms ease;
-  pointer-events: auto !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  position: relative !important;
-  z-index: 1001 !important;
-  flex-shrink: 0 !important;
-  white-space: nowrap !important;
-}
-
-.alba-optimizer-action:disabled {
-  background: rgba(31, 43, 39, 0.4);
-  cursor: not-allowed;
-}
-
-.alba-optimizer-action:hover:not(:disabled) {
-  background: #131b17;
-  transform: translateY(-1px);
-}
-
-.alba-optimizer-panel {
-  position: fixed;
-  inset: auto 24px 24px auto;
-  width: min(420px, calc(100vw - 32px));
-  max-height: 80vh;
-  overflow: auto;
-  background: var(--alba-cream);
-  border-radius: 18px;
-  box-shadow: var(--alba-shadow);
-  padding: 20px;
-  z-index: 2147483647;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  border: 1px solid var(--alba-border);
-}
-
-.alba-panel-header {
-  font-weight: 600;
-  font-size: 16px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.alba-panel-close {
-  border: none;
-  background: transparent;
-  font-size: 18px;
-  line-height: 1;
-  cursor: pointer;
-  color: var(--alba-text);
-}
-
-.alba-panel-body {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
-.alba-prompt-block {
-  background: var(--alba-surface-muted);
-  border-radius: 14px;
-  border: 1px solid var(--alba-border);
-  padding: 10px;
-  position: relative;
-  overflow: hidden;
-}
-
-.alba-prompt-block.alba-loading::after {
-  content: 'Fetching suggestion...';
-  position: absolute;
-  inset: 0;
-  backdrop-filter: blur(2px);
-  background: var(--alba-surface-soft);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 12px;
-  color: var(--alba-sage-dark);
-}
-
-.alba-block-label {
-  font-size: 12px;
-  color: var(--alba-sage-dark);
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.alba-block-content {
-  font-size: 13px;
-  color: var(--alba-text);
-  white-space: pre-wrap;
-}
-
-.alba-panel-stats {
-  font-size: 12px;
-  color: var(--alba-text);
-  padding: 8px 10px;
-  background: rgba(106, 164, 132, 0.12);
-  border-radius: 12px;
-}
-
-.alba-panel-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.alba-panel-actions button {
-  border: 1px solid var(--alba-border);
-  border-radius: 999px;
-  padding: 6px 14px;
-  background: var(--alba-surface-strong);
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.alba-panel-actions .alba-primary {
-  background: var(--alba-sage);
-  color: #fff;
-  border-color: transparent;
-}
-
-.alba-widget {
-  position: fixed;
-  bottom: 16px;
-  right: 16px;
-  font-family: var(--alba-font);
-  z-index: 2147483646;
-}
-
-.alba-widget-toggle {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  border: none;
-  background: transparent;
-  color: var(--alba-text);
-  font-weight: 600;
-  box-shadow: var(--alba-shadow);
-  cursor: pointer;
-  position: relative;
-  isolation: isolate;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 0;
-}
-
-.alba-widget-logo {
-  width: 60%;
-  height: 60%;
-  object-fit: contain;
-  pointer-events: none;
-}
-
-.alba-widget-toggle::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 50%;
-  background: conic-gradient(var(--alba-sage) calc(var(--alba-progress, 0) * 360deg), rgba(106, 164, 132, 0.2) 0);
-  z-index: -2;
-}
-
-.alba-widget-toggle::after {
-  content: '';
-  position: absolute;
-  inset: 6px;
-  border-radius: 50%;
-  background: var(--alba-cream);
-  z-index: -1;
-}
-
-.alba-widget-card {
-  margin-top: 8px;
-  padding: 14px;
-  border-radius: 16px;
-  background: var(--alba-cream);
-  box-shadow: var(--alba-shadow);
-  width: 240px;
-  border: 1px solid var(--alba-border);
-  display: none;
-}
-
-.alba-widget-tabs {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 12px;
-  background: var(--alba-surface-muted);
-  padding: 4px;
-  border-radius: 999px;
-  border: 1px solid var(--alba-border);
-}
-
-.alba-widget-tab {
-  flex: 1;
-  border: none;
-  border-radius: 999px;
-  padding: 6px 10px;
-  font-size: 12px;
-  cursor: pointer;
-  background: transparent;
-  color: var(--alba-text);
-  transition: all 120ms ease;
-}
-
-.alba-widget-tab.alba-active {
-  background: var(--alba-sage);
-  color: #fff;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.15);
-}
-
-.alba-widget.alba-open .alba-widget-card {
-  display: block;
-}
-
-.alba-widget-totals {
-  font-size: 13px;
-  line-height: 1.4;
-  margin-bottom: 8px;
-}
-
-.alba-widget-totals-line {
-  display: inline-block;
-  margin-top: 4px;
-  padding: 2px 0;
-}
-
-.alba-widget-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 8px;
-}
-
-.alba-widget-summary-link {
-  border: none;
-  background: rgba(106, 164, 132, 0.15);
-  color: var(--alba-sage-dark);
-  font-size: 10px;
-  font-weight: 600;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  padding: 2px 10px;
-  border-radius: 999px;
-  cursor: pointer;
-  transition: transform 100ms ease, background 120ms ease;
-}
-
-.alba-widget-summary-link:hover {
-  background: rgba(106, 164, 132, 0.3);
-  transform: translateY(-1px);
-}
-
-.alba-widget-comparison {
-  font-size: 12px;
-  color: var(--alba-sage-dark);
-  margin-bottom: 10px;
-}
-
-.alba-widget-delta {
-  font-size: 12px;
-  color: var(--alba-text);
-  margin-bottom: 10px;
-}
-
-.alba-widget-actions {
-  display: flex;
-  justify-content: space-between;
-  gap: 8px;
-}
-
-.alba-widget-actions button {
-  flex: 1;
-  border-radius: 999px;
-  border: 1px solid var(--alba-border);
-  background: var(--alba-surface-strong);
-  padding: 6px 0;
-  cursor: pointer;
-  font-size: 12px;
-}
-
-.alba-optimizer-preview {
-  font-weight: 500 !important;
-  flex: 1 !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-  min-width: 0 !important;
-  font-size: 12px !important;
-  color: #fff !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-/* Inline suggestion styles (Grammarly-like) */
-.alba-inline-suggestion {
-  font-family: var(--alba-font) !important;
-  background: linear-gradient(135deg, rgba(106, 164, 132, 0.08) 0%, rgba(106, 164, 132, 0.12) 100%) !important;
-  border: 1px solid var(--alba-sage) !important;
-  border-radius: 14px !important;
-  padding: 12px !important;
-  margin-top: 8px !important;
-  margin-bottom: 8px !important;
-  box-shadow: 0 2px 8px rgba(106, 164, 132, 0.15) !important;
-  animation: alba-slide-in 0.3s ease-out;
-  position: relative !important;
-  z-index: 1002 !important;
-  width: 100% !important;
-  box-sizing: border-box !important;
-  display: block !important;
-  overflow: visible !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
-
-@keyframes alba-slide-in {
-  from {
-    opacity: 0;
-    transform: translateY(-8px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.alba-suggestion-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-  gap: 8px;
-}
-
-.alba-suggestion-badge {
-  font-size: 11px;
-  font-weight: 600;
-  color: var(--alba-sage-dark);
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-}
-
-.alba-suggestion-savings {
-  font-size: 11px;
-  color: var(--alba-sage-dark);
-  background: var(--alba-surface-muted);
-  padding: 3px 8px;
-  border-radius: 999px;
-  font-weight: 500;
-}
-
-.alba-suggestion-content {
-  background: var(--alba-surface);
-  border-radius: 10px;
-  padding: 10px;
-  font-size: 13px;
-  color: var(--alba-text);
-  line-height: 1.5;
-  margin-bottom: 10px;
-  white-space: pre-wrap;
-  word-wrap: break-word;
-  border: 1px solid rgba(106, 164, 132, 0.2);
-}
-
-.alba-suggestion-impact {
-  font-size: 13px;
-  color: var(--alba-text);
-  line-height: 1.5;
-  margin-bottom: 10px;
-}
-
-.alba-suggestion-impact div + div {
-  margin-top: 4px;
-}
-
-.alba-suggestion-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-
-.alba-suggestion-btn {
-  border: 1px solid var(--alba-border) !important;
-  border-radius: 999px !important;
-  padding: 6px 16px !important;
-  font-size: 12px !important;
-  font-weight: 500 !important;
-  cursor: pointer !important;
-  transition: all 150ms ease;
-  font-family: var(--alba-font) !important;
-  pointer-events: auto !important;
-  opacity: 1 !important;
-  visibility: visible !important;
-}
-
-.alba-suggestion-dismiss {
-  background: var(--alba-surface-strong);
-  color: var(--alba-text);
-}
-
-.alba-suggestion-dismiss:hover {
-  background: var(--alba-surface-muted);
-}
-
-.alba-suggestion-accept {
-  background: var(--alba-sage);
-  color: #fff;
-  border-color: var(--alba-sage);
-}
-
-.alba-suggestion-accept:hover {
-  background: var(--alba-sage-dark);
-  border-color: var(--alba-sage-dark);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(106, 164, 132, 0.3);
-}
-
-.alba-wrapped-overlay {
-  position: fixed;
-  inset: 0;
-  background: rgba(10, 14, 12, 0.65);
-  backdrop-filter: blur(10px);
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  z-index: 2147483647;
-  font-family: var(--alba-font);
-}
-
-.alba-wrapped-overlay.alba-wrapped-visible {
-  display: flex;
-}
-
-.alba-wrapped-shell {
-  width: min(520px, calc(100vw - 32px));
-  max-height: min(640px, calc(100vh - 48px));
-  overflow-y: auto;
-  border-radius: 28px;
-  padding: 28px;
-  background: radial-gradient(circle at top left, rgba(255, 255, 255, 0.15), rgba(0, 0, 0, 0.35)),
-    linear-gradient(135deg, #0f2027, #2c5364);
-  color: #fff;
-  position: relative;
-  box-shadow: 0 35px 80px rgba(0, 0, 0, 0.45);
-}
-
-.alba-wrapped-close {
-  position: absolute;
-  top: 16px;
-  right: 16px;
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  border: none;
-  background: rgba(255, 255, 255, 0.15);
-  color: #fff;
-  font-size: 20px;
-  cursor: pointer;
-  backdrop-filter: blur(4px);
-}
-
-.alba-wrapped-body {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.alba-wrapped-head {
-  text-align: left;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.alba-wrapped-title {
-  font-size: 26px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-}
-
-.alba-wrapped-subhead {
-  font-size: 16px;
-  font-weight: 500;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.alba-wrapped-tagline {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.75);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-}
-
-.alba-wrapped-loading {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 12px;
-  padding: 28px 0;
-  text-align: center;
-}
-
-.alba-wrapped-spinner {
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  border: 3px solid rgba(255, 255, 255, 0.2);
-  border-top-color: #fff;
-  animation: alba-spin 1s linear infinite;
-}
-
-@keyframes alba-spin {
-  to {
-    transform: rotate(360deg);
-  }
-}
-
-.alba-wrapped-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: 14px;
-}
-
-.alba-wrapped-card {
-  border-radius: 22px;
-  padding: 18px;
-  background: var(--alba-wrapped-gradient, linear-gradient(135deg, #b24592, #f15f79));
-  box-shadow: 0 20px 35px rgba(0, 0, 0, 0.35);
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.alba-wrapped-card-title {
-  text-transform: uppercase;
-  font-size: 11px;
-  letter-spacing: 0.12em;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.alba-wrapped-card-stat {
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.alba-wrapped-card-value {
-  font-size: 28px;
-  font-weight: 700;
-}
-
-.alba-wrapped-card-label {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.alba-wrapped-card-analogy {
-  font-size: 14px;
-  line-height: 1.4;
-  margin: 6px 0 0;
-}
-
-.alba-wrapped-card-tip {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.85);
-}
-
-.alba-wrapped-footer {
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.alba-wrapped-footer p {
-  font-weight: 600;
-  margin: 0;
-}
-
-.alba-wrapped-error {
-  text-align: center;
-  padding: 20px;
-  border-radius: 20px;
-  background: rgba(0, 0, 0, 0.25);
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.alba-wrapped-retry {
-  border: none;
-  border-radius: 999px;
-  padding: 10px 20px;
-  background: rgba(255, 255, 255, 0.2);
-  color: #fff;
-  cursor: pointer;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-}
-
-.alba-wrapped-retry:hover {
-  background: rgba(255, 255, 255, 0.3);
-}
-
-@media (min-width: 540px) {
-  .alba-wrapped-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
-  .alba-wrapped-grid .alba-wrapped-card:first-child {
-    grid-column: span 2;
-  }
-}
-
 @media (max-width: 768px) {
-  .alba-impact-label {
+  .syc-score-pill {
     width: 100%;
     justify-content: center;
-  }
-
-  .alba-widget {
-    right: 8px;
-    bottom: 8px;
-  }
-
-  .alba-optimizer-panel {
-    inset: auto 12px 12px auto;
-    width: calc(100vw - 24px);
   }
 }

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /**
- * Alba Extension Build Script
+ * Yesbot Build Script
  *
  * Injects the GitHub PAT from environment variable and creates a distributable ZIP.
  *
  * Usage:
- *   GITHUB_TOKEN=your_pat node scripts/build.js
+ *   GITHUB_TOKEN=your_pat node scripts/build.cjs
  *
  * Or in GitHub Actions:
  *   env:
@@ -33,11 +33,11 @@ const EXTENSION_FILES = [
 ];
 
 function log(message) {
-  console.log(`[Alba Build] ${message}`);
+  console.log(`[Yesbot Build] ${message}`);
 }
 
 function error(message) {
-  console.error(`[Alba Build ERROR] ${message}`);
+  console.error(`[Yesbot Build ERROR] ${message}`);
   process.exit(1);
 }
 
@@ -95,7 +95,7 @@ function injectToken() {
 }
 
 function createZip() {
-  const zipName = 'alba-extension.zip';
+  const zipName = 'yesbot.zip';
   const zipPath = path.join(DIST_DIR, zipName);
 
   // Remove old zip if exists
@@ -123,7 +123,7 @@ function createZip() {
 }
 
 function main() {
-  log('Starting Alba extension build...');
+  log('Starting Yesbot build...');
   log(`Root directory: ${ROOT_DIR}`);
   log(`Dist directory: ${DIST_DIR}`);
 

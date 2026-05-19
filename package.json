@@ -1,21 +1,13 @@
 {
-  "name": "alba",
+  "name": "yesbot",
   "version": "1.0.0",
-  "description": "Alba is a Chrome extension that brings environmental transparency to AI usage. It overlays real-time estimates of energy, carbon, and water use for every AI query — helping users understand, reduce, and report the footprint of their digital interactions.",
+  "description": "Chrome extension that detects and scores sycophancy in AI chat responses.",
   "main": "content.js",
   "scripts": {
     "build": "node scripts/build.cjs",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/lindsaygross/Alba.git"
-  },
-  "keywords": ["chrome-extension", "sustainability", "ai", "carbon-footprint"],
+  "keywords": ["chrome-extension", "ai", "sycophancy", "llm"],
   "author": "",
-  "license": "MIT",
-  "bugs": {
-    "url": "https://github.com/lindsaygross/Alba/issues"
-  },
-  "homepage": "https://github.com/lindsaygross/Alba#readme"
+  "license": "MIT"
 }

@@ -1,189 +1,72 @@
 (() => {
-  if (!globalThis.ALBA_CONFIG || !globalThis.ALBA_STORAGE_KEYS) {
-    console.warn('alba popup: missing config');
+  if (!globalThis.SYC_CONFIG || !globalThis.SYC_STORAGE_KEYS) {
+    console.warn('yesbot popup: missing config');
     return;
   }
 
-  const todayKey = new Date().toISOString().slice(0, 10);
-  const settingsEls = {
-    enabled: document.getElementById('alba-enabled'),
-    optimizer: document.getElementById('alba-optimizer'),
-    profile: document.getElementById('alba-profile'),
-    region: document.getElementById('alba-region'),
-    theme: document.getElementById('alba-theme'),
-    totals: document.getElementById('alba-today-totals'),
-    comparison: document.getElementById('alba-comparison'),
-    exportBtn: document.getElementById('alba-export'),
-    resetBtn: document.getElementById('alba-reset')
+  const els = {
+    enabled: document.getElementById('syc-enabled'),
+    theme: document.getElementById('syc-theme'),
+    status: document.getElementById('syc-status')
   };
 
   initPopup();
 
   function initPopup() {
-    populateSelect(settingsEls.profile, ALBA_CONFIG.modelProfiles, 'label');
-    populateSelect(settingsEls.region, ALBA_CONFIG.regions);
-    populateSelect(settingsEls.theme, ALBA_CONFIG.themes, 'label');
+    populateThemes();
     loadState();
     bindEvents();
   }
 
-  function populateSelect(selectEl, data, labelKey) {
-    Object.entries(data).forEach(([value, meta]) => {
+  function populateThemes() {
+    Object.entries(SYC_CONFIG.themes).forEach(([value, meta]) => {
       const option = document.createElement('option');
       option.value = value;
-      option.textContent = meta[labelKey || 'label'] || value;
-      selectEl.appendChild(option);
+      option.textContent = meta.label || value;
+      els.theme.appendChild(option);
     });
   }
 
   function loadState() {
-    chrome.storage.sync.get(
-      [ALBA_STORAGE_KEYS.settings, ALBA_STORAGE_KEYS.totals, ALBA_STORAGE_KEYS.history],
-      (data) => {
-        const settings = { ...ALBA_CONFIG.defaultSettings, ...(data[ALBA_STORAGE_KEYS.settings] || {}) };
-        settingsEls.enabled.checked = settings.enabled;
-        settingsEls.optimizer.checked = settings.optimizerEnabled;
-        settingsEls.profile.value = settings.modelProfile;
-        settingsEls.region.value = settings.region;
-        settingsEls.theme.value = getValidTheme(settings.theme);
-        applyPopupTheme(settingsEls.theme.value);
-        renderTotals(data[ALBA_STORAGE_KEYS.totals] || {});
-      }
-    );
+    chrome.storage.sync.get([SYC_STORAGE_KEYS.settings], (data) => {
+      const settings = { ...SYC_CONFIG.defaultSettings, ...(data[SYC_STORAGE_KEYS.settings] || {}) };
+      els.enabled.checked = settings.enabled;
+      els.theme.value = getValidTheme(settings.theme);
+      applyTheme(els.theme.value);
+      updateStatus(settings.enabled);
+    });
   }
 
   function bindEvents() {
-    settingsEls.enabled.addEventListener('change', saveSettings);
-    settingsEls.optimizer.addEventListener('change', saveSettings);
-    settingsEls.profile.addEventListener('change', saveSettings);
-    settingsEls.region.addEventListener('change', saveSettings);
-    settingsEls.theme.addEventListener('change', () => {
-      applyPopupTheme(settingsEls.theme.value);
+    els.enabled.addEventListener('change', () => {
+      saveSettings();
+      updateStatus(els.enabled.checked);
+    });
+    els.theme.addEventListener('change', () => {
+      applyTheme(els.theme.value);
       saveSettings();
     });
-    settingsEls.exportBtn.addEventListener('click', exportHistoryFromPopup);
-    settingsEls.resetBtn.addEventListener('click', resetTodayFromPopup);
   }
 
   function saveSettings() {
     const payload = {
-      enabled: settingsEls.enabled.checked,
-      optimizerEnabled: settingsEls.optimizer.checked,
-      modelProfile: settingsEls.profile.value,
-      region: settingsEls.region.value,
-      theme: getValidTheme(settingsEls.theme.value),
-      remoteOptimizer: true  // Enable remote optimizer for API calls
+      enabled: els.enabled.checked,
+      theme: getValidTheme(els.theme.value)
     };
-    chrome.storage.sync.set({ [ALBA_STORAGE_KEYS.settings]: payload });
+    chrome.storage.sync.set({ [SYC_STORAGE_KEYS.settings]: payload });
   }
 
   function getValidTheme(themeKey) {
-    if (ALBA_CONFIG.themes && ALBA_CONFIG.themes[themeKey]) {
-      return themeKey;
-    }
-    return 'light';
+    return SYC_CONFIG.themes[themeKey] ? themeKey : 'light';
   }
 
-  function applyPopupTheme(themeKey) {
-    document.body.dataset.albaTheme = getValidTheme(themeKey);
+  function applyTheme(themeKey) {
+    document.body.dataset.sycTheme = getValidTheme(themeKey);
   }
 
-  function renderTotals(totalsMap) {
-    const totals = totalsMap[todayKey] || { Wh: 0, gCO2: 0, waterMl: 0 };
-    const tooltipCopy = formatTotalsTooltip(totals);
-    settingsEls.totals.innerHTML = `
-      <span class="alba-tooltip-host">
-        ${totals.Wh.toFixed(2)} Wh | ${totals.gCO2.toFixed(2)} g CO2 | ${totals.waterMl.toFixed(0)} mL
-        <span class="alba-tooltip">${tooltipCopy}</span>
-      </span>`;
-    settingsEls.comparison.textContent = formatComparison(totals.Wh);
-  }
-
-  function formatComparison(Wh) {
-    if (!Wh || Wh <= 0) return 'No impact recorded yet today.';
-    const baseline = ALBA_CONFIG.baselineComparisons && ALBA_CONFIG.baselineComparisons[0];
-    if (!baseline || !baseline.factorWh) return 'Comparable impact unavailable.';
-    const value = (Wh / baseline.factorWh).toFixed(1);
-    return `${baseline.label} for ${value} minutes`;
-  }
-
-  function formatTotalsTooltip(totals) {
-    const pieces = [];
-    const kWh = totals.Wh / 1000;
-    pieces.push(`Energy: ${totals.Wh.toFixed(3)} Wh (~${kWh.toFixed(6)} kWh).`);
-    const baseline = ALBA_CONFIG.baselineComparisons && ALBA_CONFIG.baselineComparisons[0];
-    if (baseline && baseline.factorWh) {
-      const eq = totals.Wh / baseline.factorWh;
-      if (eq >= 0.01) {
-        pieces.push(`≈ ${eq.toFixed(1)} ${baseline.label}.`);
-      }
-    }
-    pieces.push(`Emissions: ${totals.gCO2.toFixed(3)} g CO2.`);
-    pieces.push(`Water: ${totals.waterMl.toFixed(1)} mL.`);
-    pieces.push('Estimates run locally using alba assumptions.');
-    return pieces.join(' ');
-  }
-
-  function exportHistoryFromPopup() {
-    chrome.storage.sync.get(ALBA_STORAGE_KEYS.history, (data) => {
-      const entries = data[ALBA_STORAGE_KEYS.history] || [];
-      if (!entries.length) return;
-      const csv = buildCsv(entries);
-      triggerDownload(csv, `alba-footprint-${todayKey}.csv`);
-    });
-  }
-
-  function resetTodayFromPopup() {
-    chrome.storage.sync.get(
-      [ALBA_STORAGE_KEYS.totals, ALBA_STORAGE_KEYS.history],
-      (data) => {
-        const totals = data[ALBA_STORAGE_KEYS.totals] || {};
-        totals[todayKey] = { Wh: 0, gCO2: 0, waterMl: 0 };
-        const filteredHistory = (data[ALBA_STORAGE_KEYS.history] || []).filter(
-          (entry) => new Date(entry.timestamp).toISOString().slice(0, 10) !== todayKey
-        );
-        chrome.storage.sync.set(
-          {
-            [ALBA_STORAGE_KEYS.totals]: totals,
-            [ALBA_STORAGE_KEYS.history]: filteredHistory
-          },
-          loadState
-        );
-      }
-    );
-  }
-
-  function buildCsv(entries) {
-    const header = 'timestamp,site,source,modality,chars,tokens,Wh,gCO2,waterMl\n';
-    const rows = entries
-      .map((entry) =>
-        [
-          new Date(entry.timestamp).toISOString(),
-          entry.site,
-          entry.source,
-          entry.modality,
-          entry.chars,
-          entry.tokens,
-          entry.Wh.toFixed(4),
-          entry.gCO2.toFixed(4),
-          entry.waterMl.toFixed(2)
-        ].join(',')
-      )
-      .join('\n');
-    return header + rows;
-  }
-
-  function triggerDownload(content, filename) {
-    const blob = new Blob([content], { type: 'text/csv' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = filename;
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(() => {
-      URL.revokeObjectURL(url);
-      a.remove();
-    }, 0);
+  function updateStatus(enabled) {
+    els.status.textContent = enabled
+      ? 'Active — scoring AI responses on supported sites.'
+      : 'Disabled — no scores will appear.';
   }
 })();
